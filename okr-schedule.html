@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OKR 月度排期</title>
+<style>
+:root {
+  --plan:   #2563eb; --plan-bg:   #eff6ff;
+  --track:  #16a34a; --track-bg:  #f0fdf4;
+  --review: #d97706; --review-bg: #fffbeb;
+  --cult:   #7c3aed; --cult-bg:   #f5f3ff;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,'PingFang SC','Helvetica Neue',sans-serif;background:#f1f5f9;color:#1e293b;font-size:14px}
+.hdr{background:#fff;border-bottom:1px solid #e2e8f0;padding:13px 20px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:99}
+.hdr-title{font-size:16px;font-weight:700}
+.hdr-date{font-size:13px;color:#64748b}
+.legend{background:#fff;border-bottom:1px solid #e2e8f0;padding:8px 20px;display:flex;gap:18px;flex-wrap:wrap;align-items:center}
+.leg-item{display:flex;align-items:center;gap:5px;font-size:12px;color:#475569}
+.leg-dot{width:8px;height:8px;border-radius:50%}
+.leg-note{margin-left:auto;font-size:11px;background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:4px}
+.wrap{padding:16px 20px;overflow-x:auto}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(230px,1fr));gap:14px}
+.col{background:#fff;border-radius:10px;border:1px solid #e2e8f0;overflow:hidden}
+.col.cur{border-color:#93c5fd;background:#f8fbff}
+.col-hdr{padding:11px 14px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center}
+.col.cur .col-hdr{border-bottom-color:#bfdbfe}
+.col-name{font-size:14px;font-weight:700}
+.cur-badge{font-size:11px;font-weight:600;background:#2563eb;color:#fff;padding:1px 7px;border-radius:10px}
+.evlist{padding:7px}
+.ev{padding:9px 10px;margin-bottom:5px;border-radius:7px;border-left:3px solid #cbd5e1;background:#f8fafc}
+.col.cur .ev{background:#fff}
+.ev.past{opacity:.38}
+.ev.today{box-shadow:0 0 0 2px #f59e0b;background:#fffbeb!important}
+.ev.plan  {border-left-color:var(--plan)}
+.ev.track {border-left-color:var(--track)}
+.ev.review{border-left-color:var(--review)}
+.ev.cult  {border-left-color:var(--cult)}
+.ev-date{font-size:11px;color:#94a3b8;margin-bottom:3px;display:flex;align-items:center;gap:4px}
+.ev-time{color:#ef4444;font-weight:600}
+.ev-now{font-size:10px;font-weight:700;background:#fef3c7;color:#b45309;padding:0 4px;border-radius:3px}
+.ev-label{font-size:12px;font-weight:600;color:#1e293b;line-height:1.4;margin-bottom:5px}
+.ev-tags{display:flex;gap:4px;flex-wrap:wrap}
+.tag{font-size:10px;font-weight:500;padding:1px 5px;border-radius:3px}
+.tag.plan  {background:var(--plan-bg);  color:var(--plan)}
+.tag.track {background:var(--track-bg); color:var(--track)}
+.tag.review{background:var(--review-bg);color:var(--review)}
+.tag.cult  {background:var(--cult-bg);  color:var(--cult)}
+.tag.role-上级{background:#fff3e0;color:#c2410c}
+.tag.role-员工{background:#e0f2fe;color:#0369a1}
+.tag.role-团队{background:#f1f5f9;color:#475569}
+.tdiv{display:flex;align-items:center;gap:6px;padding:2px 4px;margin:4px 0}
+.tdiv-line{flex:1;height:1px;background:#fbbf24}
+.tdiv-txt{font-size:10px;font-weight:700;color:#f59e0b;white-space:nowrap}
+@media(max-width:900px){.grid{grid-template-columns:repeat(2,minmax(220px,1fr))}}
+@media(max-width:500px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+// ── Holiday data ─────────────────────────────────────────────────────────────
+const HOL = new Set([
+  // 2025 元旦
+  '2025-01-01',
+  // 2025 春节
+  '2025-01-28','2025-01-29','2025-01-30','2025-01-31',
+  '2025-02-01','2025-02-02','2025-02-03','2025-02-04',
+  // 2025 清明
+  '2025-04-04','2025-04-05','2025-04-06',
+  // 2025 劳动节
+  '2025-05-01','2025-05-02','2025-05-03','2025-05-04','2025-05-05',
+  // 2025 端午
+  '2025-05-31','2025-06-01','2025-06-02',
+  // 2025 国庆+中秋
+  '2025-10-01','2025-10-02','2025-10-03','2025-10-04',
+  '2025-10-05','2025-10-06','2025-10-07','2025-10-08',
+  // 2026 元旦（国办发明电〔2025〕7号）
+  '2026-01-01','2026-01-02','2026-01-03',
+  // 2026 春节（2月15日–23日）
+  '2026-02-15','2026-02-16','2026-02-17','2026-02-18','2026-02-19',
+  '2026-02-20','2026-02-21','2026-02-22','2026-02-23',
+  // 2026 清明
+  '2026-04-04','2026-04-05','2026-04-06',
+  // 2026 劳动节
+  '2026-05-01','2026-05-02','2026-05-03','2026-05-04','2026-05-05',
+  // 2026 端午
+  '2026-06-19','2026-06-20','2026-06-21',
+  // 2026 中秋
+  '2026-09-25','2026-09-26','2026-09-27',
+  // 2026 国庆
+  '2026-10-01','2026-10-02','2026-10-03','2026-10-04',
+  '2026-10-05','2026-10-06','2026-10-07',
+]);
+
+// 补班日（周末当工作日）
+const MAKEUP = new Set([
+  // 2025
+  '2025-01-26','2025-02-08','2025-04-27','2025-09-28','2025-10-11',
+  // 2026（国办发明电〔2025〕7号）
+  '2026-01-04',  // 周日，元旦补班
+  '2026-02-14',  // 周六，春节补班
+  '2026-02-28',  // 周六，春节补班
+  '2026-05-09',  // 周六，劳动节补班
+  '2026-09-20',  // 周日，国庆补班
+  '2026-10-10',  // 周六，国庆补班
+]);
+
+function ds(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function isWork(d) {
+  const s = ds(d);
+  if (MAKEUP.has(s)) return true;
+  if (HOL.has(s)) return false;
+  return d.getDay() !== 0 && d.getDay() !== 6;
+}
+function nthWork(y, m, n) {
+  const d = new Date(y, m-1, 1); let c = 0;
+  while (d.getMonth() === m-1) {
+    if (isWork(d) && ++c === n) return new Date(d);
+    d.setDate(d.getDate()+1);
+  }
+  return null;
+}
+function lastNthWork(y, m, n) {
+  const d = new Date(y, m, 0); let c = 0;
+  while (d.getFullYear() === y && d.getMonth() === m-1) {
+    if (isWork(d) && ++c === n) return new Date(d);
+    d.setDate(d.getDate()-1);
+  }
+  return null;
+}
+function workFridays(y, m) {
+  const r = [], d = new Date(y, m-1, 1);
+  while (d.getMonth() === m-1) {
+    if (d.getDay() === 5 && isWork(d)) r.push(new Date(d));
+    d.setDate(d.getDate()+1);
+  }
+  return r;
+}
+
+// ── Event generation ─────────────────────────────────────────────────────────
+function getEvents(y, m) {
+  const evs = [];
+  const add = (date, label, phase, role, time) => {
+    if (date) evs.push({date, label, phase, role, time: time||null});
+  };
+
+  // 1号：上级提交文化评价问卷
+  add(new Date(y,m-1,1), '上级提交文化评价问卷', 'cult', '上级');
+  // 第1工作日：上级完成上月OKR评分 & 沟通本月OKR
+  add(nthWork(y,m,1), '上级完成上月 OKR 评分 & 沟通本月 OKR 修改', 'plan', '上级');
+  // 第2工作日：团队月度复盘会
+  add(nthWork(y,m,2), '团队月度复盘会', 'review', '团队');
+  // 第3工作日 18:00：上级确认本月OKR
+  add(nthWork(y,m,3), '上级确认本月 OKR 正式生效', 'plan', '上级', '18:00');
+  // 每周五 18:00：OKR进展更新
+  workFridays(y,m).forEach(f => add(f, 'OKR 进展更新 & 周度复盘', 'track', '员工', '18:00'));
+  // 倒数第3工作日：启动下月OKR制定 & 开始自评
+  add(lastNthWork(y,m,3), '启动下月 OKR 制定 & 开始本月自评', 'review', '员工');
+  // 最后工作日：提交自评 + 下月OKR初稿 + 文化自评
+  add(lastNthWork(y,m,1), '提交自评文档 & 下月 OKR 初稿 & 文化自评问卷', 'review', '员工');
+
+  evs.sort((a,b) => a.date - b.date);
+  return evs;
+}
+
+// ── Render ───────────────────────────────────────────────────────────────────
+const PL = {plan:'制定', track:'跟进', review:'复盘', cult:'文化'};
+const WD = ['日','一','二','三','四','五','六'];
+
+function card(ev, past, today) {
+  const dl = `${ev.date.getMonth()+1}月${ev.date.getDate()}日（周${WD[ev.date.getDay()]}）`;
+  return `<div class="ev ${ev.phase}${past?' past':''}${today?' today':''}">
+    <div class="ev-date">${dl}${ev.time?`<span class="ev-time">${ev.time}</span>`:''}${today?'<span class="ev-now">今天</span>':''}</div>
+    <div class="ev-label">${ev.label}</div>
+    <div class="ev-tags"><span class="tag ${ev.phase}">${PL[ev.phase]}</span><span class="tag role-${ev.role}">${ev.role}</span></div>
+  </div>`;
+}
+
+function todayDiv(today) {
+  return `<div class="tdiv"><div class="tdiv-line"></div><div class="tdiv-txt">今天 ${today.getMonth()+1}月${today.getDate()}日</div><div class="tdiv-line"></div></div>`;
+}
+
+function renderCol(y, m, isCur, today) {
+  const tstr = ds(today);
+  const evs = getEvents(y, m);
+  let html = '';
+
+  if (!isCur) {
+    html = evs.map(e => card(e, false, false)).join('');
+  } else {
+    let divDone = false;
+    const allPast = evs.every(e => ds(e.date) < tstr);
+    if (allPast) {
+      html = evs.map(e => card(e, true, false)).join('') + todayDiv(today);
+    } else {
+      evs.forEach(e => {
+        const s = ds(e.date), past = s < tstr, isT = s === tstr;
+        if (!divDone && s >= tstr) {
+          if (!isT) html += todayDiv(today);
+          divDone = true;
+        }
+        html += card(e, past, isT);
+      });
+    }
+  }
+
+  return `<div class="col${isCur?' cur':''}">
+    <div class="col-hdr">
+      <div class="col-name">${String(y).slice(2)}年${m}月</div>
+      ${isCur?'<span class="cur-badge">本月</span>':''}
+    </div>
+    <div class="evlist">${html}</div>
+  </div>`;
+}
+
+function render() {
+  const t = new Date(), cy = t.getFullYear(), cm = t.getMonth()+1;
+  const cols = [];
+  for (let i = -1; i <= 2; i++) {
+    let m = cm+i, y = cy;
+    if (m < 1) { m += 12; y--; }
+    if (m > 12) { m -= 12; y++; }
+    cols.push(renderCol(y, m, y===cy && m===cm, t));
+  }
+  document.getElementById('root').innerHTML = `
+    <div class="hdr">
+      <div class="hdr-title">OKR 月度排期</div>
+      <div class="hdr-date">今天：${cy}年${cm}月${t.getDate()}日&nbsp;周${WD[t.getDay()]}</div>
+    </div>
+    <div class="legend">
+      <div class="leg-item"><div class="leg-dot" style="background:var(--plan)"></div>制定</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--track)"></div>跟进</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--review)"></div>复盘</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--cult)"></div>文化问卷</div>
+    </div>
+    <div class="wrap"><div class="grid">${cols.join('')}</div></div>`;
+}
+render();
+</script>
+</body>
+</html>

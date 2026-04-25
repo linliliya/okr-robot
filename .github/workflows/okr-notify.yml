@@ -1,0 +1,24 @@
+name: OKR 飞书每日提醒
+
+on:
+  schedule:
+    # 每天 09:00 北京时间（UTC+8 = UTC 01:00）
+    - cron: "0 1 * * *"
+  workflow_dispatch:  # 允许在 GitHub 页面手动触发，方便测试
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 发送 OKR 提醒
+        env:
+          FEISHU_APP_ID:      ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET:  ${{ secrets.FEISHU_APP_SECRET }}
+          FEISHU_MANAGER_IDS: ${{ secrets.FEISHU_MANAGER_IDS }}
+        run: python okr_notify.py

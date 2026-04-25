@@ -1,0 +1,9 @@
+# 默认忽略所有文件
+*
+
+# 只保留 OKR 相关文件
+!.gitignore
+!okr-schedule.html
+!okr_notify.py
+!.github/
+!.github/**
