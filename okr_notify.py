@@ -121,7 +121,7 @@ def get_events_for_month(year: int, month: int) -> list[dict]:
             events.append({"date": d, "label": label, "phase": phase,
                             "role": role, "time": time})
 
-    add(date(year, month, 1),       "上级提交文化评价问卷",             "cult",   "上级")
+    add(nth_workday(year, month, 1), "上级提交文化评价问卷",             "cult",   "上级")
     add(nth_workday(year, month, 1), "上级完成上月 OKR 评分 & 沟通本月 OKR 修改", "plan", "上级")
     add(nth_workday(year, month, 2), "团队月度复盘会",                  "review", "团队")
     add(nth_workday(year, month, 3), "上级确认本月 OKR 正式生效",        "plan",   "上级", "18:00")

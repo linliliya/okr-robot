@@ -148,8 +148,8 @@ function getEvents(y, m) {
     if (date) evs.push({date, label, phase, role, time: time||null});
   };
 
-  // 1号：上级提交文化评价问卷
-  add(new Date(y,m-1,1), '上级提交文化评价问卷', 'cult', '上级');
+  // 第1工作日：上级提交文化评价问卷
+  add(nthWork(y,m,1), '上级提交文化评价问卷', 'cult', '上级');
   // 第1工作日：上级完成上月OKR评分 & 沟通本月OKR
   add(nthWork(y,m,1), '上级完成上月 OKR 评分 & 沟通本月 OKR 修改', 'plan', '上级');
   // 第2工作日：团队月度复盘会
