@@ -122,9 +122,8 @@ def get_events_for_month(year: int, month: int) -> list[dict]:
                             "role": role, "time": time})
 
     add(nth_workday(year, month, 1), "上级提交文化评价问卷",             "cult",   "上级")
-    add(nth_workday(year, month, 1), "上级完成上月 OKR 评分 & 沟通本月 OKR 修改", "plan", "上级")
-    add(nth_workday(year, month, 2), "团队月度复盘会",                  "review", "团队")
-    add(nth_workday(year, month, 3), "上级确认本月 OKR 正式生效",        "plan",   "上级", "18:00")
+    add(nth_workday(year, month, 2), "团队月度复盘会",                     "review", "团队")
+    add(nth_workday(year, month, 3), "上级完成上月 OKR 评分 & 确认本月 OKR", "plan",   "上级", "18:00")
     for fri in work_fridays(year, month):
         add(fri,                     "OKR 进展更新 & 周度复盘",          "track",  "员工", "18:00")
     add(last_nth_workday(year, month, 3), "启动下月 OKR 制定 & 开始本月自评",        "review", "员工")

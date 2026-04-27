@@ -150,12 +150,10 @@ function getEvents(y, m) {
 
   // 第1工作日：上级提交文化评价问卷
   add(nthWork(y,m,1), '上级提交文化评价问卷', 'cult', '上级');
-  // 第1工作日：上级完成上月OKR评分 & 沟通本月OKR
-  add(nthWork(y,m,1), '上级完成上月 OKR 评分 & 沟通本月 OKR 修改', 'plan', '上级');
   // 第2工作日：团队月度复盘会
   add(nthWork(y,m,2), '团队月度复盘会', 'review', '团队');
-  // 第3工作日 18:00：上级确认本月OKR
-  add(nthWork(y,m,3), '上级确认本月 OKR 正式生效', 'plan', '上级', '18:00');
+  // 第3工作日 18:00：上级完成上月OKR评分 & 确认本月OKR
+  add(nthWork(y,m,3), '上级完成上月 OKR 评分 & 确认本月 OKR', 'plan', '上级', '18:00');
   // 每周五 18:00：OKR进展更新
   workFridays(y,m).forEach(f => add(f, 'OKR 进展更新 & 周度复盘', 'track', '员工', '18:00'));
   // 倒数第3工作日：启动下月OKR制定 & 开始自评
