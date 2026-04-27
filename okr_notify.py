@@ -116,18 +116,24 @@ WEEKDAY_ZH  = ["一", "二", "三", "四", "五", "六", "日"]
 def get_events_for_month(year: int, month: int) -> list[dict]:
     events = []
 
-    def add(d, label, phase, role, time=None):
+    def add(d, label, phase, role, time=None, warnings=None):
         if d:
             events.append({"date": d, "label": label, "phase": phase,
-                            "role": role, "time": time})
+                            "role": role, "time": time, "warnings": warnings or []})
 
     add(nth_workday(year, month, 1), "上级提交文化评价问卷",             "cult",   "上级")
-    add(nth_workday(year, month, 2), "团队月度复盘会",                     "review", "团队")
+    add(nth_workday(year, month, 2), "团队月度复盘会",                   "review", "团队", warnings=[
+        "请尽快和上级预约会议",
+        "如因个人原因未及时约会议，导致绩效无法有效评估，可能影响薪资正常发放",
+    ])
     add(nth_workday(year, month, 3), "上级完成上月 OKR 评分 & 确认本月 OKR", "plan",   "上级", "18:00")
     for fri in work_fridays(year, month):
         add(fri,                     "OKR 进展更新 & 周度复盘",          "track",  "员工", "18:00")
     add(last_nth_workday(year, month, 3), "启动下月 OKR 制定 & 开始本月自评",        "review", "员工")
-    add(last_nth_workday(year, month, 1), "提交自评文档 & 下月 OKR 初稿 & 文化自评问卷", "review", "员工")
+    add(last_nth_workday(year, month, 1), "提交自评文档 & 下月 OKR 初稿 & 文化自评问卷", "review", "员工", warnings=[
+        "请务必在截止日前完成提交",
+        "如未及时提交，绩效结果将无法生成，会影响正常绩效工资的发放",
+    ])
 
     events.sort(key=lambda e: e["date"])
     return events
@@ -204,6 +210,8 @@ def send_message(token: str, receive_id_type: str, receive_id: str,
                        "text": f"❗️ 事项：【{PHASE_LABEL[ev['phase']]}】{ev['label']}"}])
         if ev["time"]:
             lines.append([{"tag": "text", "text": f"⏰ 到期时间：{ev['time']} 前"}])
+        for w in ev.get("warnings", []):
+            lines.append([{"tag": "text", "text": f"⚠️ {w}"}])
         lines.append([{"tag": "text", "text": ""}])
 
     content_obj = {
