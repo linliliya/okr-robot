@@ -226,6 +226,13 @@ def send_message(token: str, receive_id_type: str, receive_id: str,
             lines.append([{"tag": "a", "text": f"  {ev['link']['url']}", "href": ev["link"]["url"]}])
         lines.append([{"tag": "text", "text": ""}])
 
+    if receive_id_type == "chat_id":
+        lines.append([
+            {"tag": "text", "text": "更多 OKR 安排可查看："},
+            {"tag": "a", "text": "http://okr-internal.aurange.cn/okr-schedule.html",
+             "href": "http://okr-internal.aurange.cn/okr-schedule.html"},
+        ])
+
     content_obj = {
         "zh_cn": {
             "title": f"📅 OKR 今日提醒 · {today.month}月{today.day}日 周{weekday}",
