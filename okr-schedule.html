@@ -6,55 +6,75 @@
 <title>OKR 月度排期</title>
 <style>
 :root {
-  --plan:   #2563eb; --plan-bg:   #eff6ff;
-  --track:  #16a34a; --track-bg:  #f0fdf4;
-  --review: #d97706; --review-bg: #fffbeb;
-  --cult:   #7c3aed; --cult-bg:   #f5f3ff;
+  --plan:      #1d4ed8; --plan-bg:   #dbeafe; --plan-muted:   #eff6ff;
+  --track:     #15803d; --track-bg:  #bbf7d0; --track-muted:  #f0fdf4;
+  --review:    #b45309; --review-bg: #fde68a; --review-muted: #fffbeb;
+  --cult:      #6d28d9; --cult-bg:   #ddd6fe; --cult-muted:   #f5f3ff;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,'PingFang SC','Helvetica Neue',sans-serif;background:#f1f5f9;color:#1e293b;font-size:14px}
-.hdr{background:#fff;border-bottom:1px solid #e2e8f0;padding:13px 20px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:99}
-.hdr-title{font-size:16px;font-weight:700}
-.hdr-date{font-size:13px;color:#64748b}
-.legend{background:#fff;border-bottom:1px solid #e2e8f0;padding:8px 20px;display:flex;gap:18px;flex-wrap:wrap;align-items:center}
-.leg-item{display:flex;align-items:center;gap:5px;font-size:12px;color:#475569}
-.leg-dot{width:8px;height:8px;border-radius:50%}
-.leg-note{margin-left:auto;font-size:11px;background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:4px}
-.wrap{padding:16px 20px;overflow-x:auto}
-.grid{display:grid;grid-template-columns:repeat(4,minmax(230px,1fr));gap:14px}
-.col{background:#fff;border-radius:10px;border:1px solid #e2e8f0;overflow:hidden}
-.col.cur{border-color:#93c5fd;background:#f8fbff}
-.col-hdr{padding:11px 14px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center}
-.col.cur .col-hdr{border-bottom-color:#bfdbfe}
-.col-name{font-size:14px;font-weight:700}
-.cur-badge{font-size:11px;font-weight:600;background:#2563eb;color:#fff;padding:1px 7px;border-radius:10px}
-.evlist{padding:7px}
-.ev{padding:9px 10px;margin-bottom:5px;border-radius:7px;border-left:3px solid #cbd5e1;background:#f8fafc}
-.col.cur .ev{background:#fff}
-.ev.past{opacity:.38}
-.ev.today{box-shadow:0 0 0 2px #f59e0b;background:#fffbeb!important}
-.ev.plan  {border-left-color:var(--plan)}
-.ev.track {border-left-color:var(--track)}
-.ev.review{border-left-color:var(--review)}
-.ev.cult  {border-left-color:var(--cult)}
-.ev-date{font-size:11px;color:#94a3b8;margin-bottom:3px;display:flex;align-items:center;gap:4px}
-.ev-time{color:#ef4444;font-weight:600}
-.ev-now{font-size:10px;font-weight:700;background:#fef3c7;color:#b45309;padding:0 4px;border-radius:3px}
-.ev-label{font-size:12px;font-weight:600;color:#1e293b;line-height:1.4;margin-bottom:5px}
-.ev-tags{display:flex;gap:4px;flex-wrap:wrap}
-.tag{font-size:10px;font-weight:500;padding:1px 5px;border-radius:3px}
+body{font-family:-apple-system,'PingFang SC','Helvetica Neue',sans-serif;background:#f0f4f8;color:#1e293b;font-size:14px;line-height:1.5}
+
+/* ── Header ── */
+.hdr{background:#1e293b;padding:16px 28px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:99}
+.hdr-title{font-size:16px;font-weight:700;color:#f8fafc;letter-spacing:.2px}
+.hdr-date{font-size:12px;color:#94a3b8}
+
+/* ── Legend ── */
+.legend{background:#fff;border-bottom:1px solid #e2e8f0;padding:10px 28px;display:flex;gap:18px;flex-wrap:wrap;align-items:center}
+.leg-item{display:flex;align-items:center;gap:6px;font-size:12px;color:#475569;font-weight:500}
+.leg-dot{width:9px;height:9px;border-radius:3px;flex-shrink:0}
+
+/* ── Grid ── */
+.wrap{padding:24px 28px;overflow-x:auto}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(250px,1fr));gap:18px}
+
+/* ── Month column ── */
+.col{background:#fff;border-radius:14px;border:1px solid #e2e8f0;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.col.cur{border-color:#93c5fd;box-shadow:0 0 0 3px #dbeafe, 0 2px 8px rgba(37,99,235,.1)}
+.col-hdr{padding:16px 18px 14px;border-bottom:1px solid #f1f5f9}
+.col.cur .col-hdr{border-bottom-color:#dbeafe}
+.col-month{font-size:22px;font-weight:800;color:#0f172a;letter-spacing:-.5px;line-height:1}
+.col-year{font-size:12px;color:#94a3b8;margin-bottom:6px;font-weight:500}
+.cur-badge{display:inline-block;font-size:11px;font-weight:600;background:#2563eb;color:#fff;padding:3px 10px;border-radius:20px;margin-top:8px}
+.evlist{padding:12px}
+
+/* ── Event card ── */
+.ev{margin-bottom:10px;border-radius:10px;overflow:hidden}
+.ev.past{opacity:.3}
+.ev.today .ev-body{outline:2px solid #f59e0b;outline-offset:-2px;border-radius:0 0 10px 10px}
+.ev-accent{height:4px}
+.ev.plan   .ev-accent{background:var(--plan-bg)}
+.ev.track  .ev-accent{background:var(--track-bg)}
+.ev.review .ev-accent{background:var(--review-bg)}
+.ev.cult   .ev-accent{background:var(--cult-bg)}
+.ev-body{padding:11px 13px 12px;background:#f8fafc;border:1px solid #f1f5f9;border-top:none;border-radius:0 0 10px 10px}
+.col.cur .ev-body{background:#fff}
+
+/* ── Card internals ── */
+.ev-date{font-size:11px;color:#94a3b8;margin-bottom:6px;display:flex;align-items:center;gap:6px;font-weight:500}
+.ev-time{color:#dc2626;font-weight:700;font-size:11px}
+.ev-now{font-size:10px;font-weight:700;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:4px;letter-spacing:.2px}
+.ev-label{font-size:13px;font-weight:600;color:#0f172a;line-height:1.5;margin-bottom:9px}
+.ev-tags{display:flex;gap:5px;flex-wrap:wrap}
+.tag{font-size:11px;font-weight:600;padding:2px 8px;border-radius:5px;letter-spacing:.1px}
 .tag.plan  {background:var(--plan-bg);  color:var(--plan)}
 .tag.track {background:var(--track-bg); color:var(--track)}
 .tag.review{background:var(--review-bg);color:var(--review)}
 .tag.cult  {background:var(--cult-bg);  color:var(--cult)}
-.tag.role-上级{background:#fff3e0;color:#c2410c}
+.tag.role-上级{background:#fee2e2;color:#b91c1c}
 .tag.role-员工{background:#e0f2fe;color:#0369a1}
 .tag.role-团队{background:#f1f5f9;color:#475569}
-.tdiv{display:flex;align-items:center;gap:6px;padding:2px 4px;margin:4px 0}
-.tdiv-line{flex:1;height:1px;background:#fbbf24}
-.tdiv-txt{font-size:10px;font-weight:700;color:#f59e0b;white-space:nowrap}
-@media(max-width:900px){.grid{grid-template-columns:repeat(2,minmax(220px,1fr))}}
-@media(max-width:500px){.grid{grid-template-columns:1fr}}
+.ev-desc{font-size:12px;color:#64748b;margin-top:10px;line-height:1.65;padding-top:10px;border-top:1px dashed #e2e8f0}
+.ev-link{color:#2563eb;text-decoration:none;font-weight:500}
+.ev-link:hover{text-decoration:underline}
+
+/* ── Today divider ── */
+.tdiv{display:flex;align-items:center;gap:8px;padding:4px;margin:8px 0}
+.tdiv-line{flex:1;height:1px;background:linear-gradient(90deg,transparent,#fbbf24,transparent)}
+.tdiv-txt{font-size:11px;font-weight:700;color:#d97706;white-space:nowrap;background:#fef3c7;padding:2px 8px;border-radius:10px}
+
+@media(max-width:960px){.grid{grid-template-columns:repeat(2,minmax(230px,1fr))}}
+@media(max-width:520px){.grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -144,22 +164,35 @@ function workFridays(y, m) {
 // ── Event generation ─────────────────────────────────────────────────────────
 function getEvents(y, m) {
   const evs = [];
-  const add = (date, label, phase, role, time) => {
-    if (date) evs.push({date, label, phase, role, time: time||null});
+  const add = (date, label, phase, role, time, desc, link) => {
+    if (date) evs.push({date, label, phase, role, time: time||null, desc: desc||null, link: link||null});
   };
 
-  // 第1工作日：上级提交文化评价问卷
-  add(nthWork(y,m,1), '上级提交文化评价问卷', 'cult', '上级');
-  // 第2工作日：团队月度复盘会
-  add(nthWork(y,m,2), '团队月度复盘会', 'review', '团队');
-  // 第3工作日 18:00：上级完成上月OKR评分 & 确认本月OKR
-  add(nthWork(y,m,3), '上级完成上月 OKR 评分 & 确认本月 OKR', 'plan', '上级', '18:00');
-  // 每周五 18:00：OKR进展更新
-  workFridays(y,m).forEach(f => add(f, 'OKR 进展更新 & 周度复盘', 'track', '员工', '18:00'));
-  // 倒数第3工作日：启动下月OKR制定 & 开始自评
-  add(lastNthWork(y,m,3), '启动下月 OKR 制定 & 开始本月自评', 'review', '员工');
-  // 最后工作日：提交自评 + 下月OKR初稿 + 文化自评
-  add(lastNthWork(y,m,1), '提交自评文档 & 下月 OKR 初稿 & 文化自评问卷', 'review', '员工');
+  const wd5 = nthWork(y,m,5);
+  const wd5Label = wd5 ? `${wd5.getMonth()+1}月${wd5.getDate()}日` : '第5个工作日';
+
+  add(nthWork(y,m,1), '上级提交文化评价问卷', 'cult', '上级', null,
+    '请填写对团队成员的文化评价问卷',
+    {text: '点击填写', url: 'https://n6fo0mbcz6.feishu.cn/share/base/form/shrcnXu5NLgrWDKrcA9E34E8IFf'});
+
+  add(nthWork(y,m,1), '预约上级 1v1 月度绩效沟通', 'review', '员工', null,
+    `请在本月第5个工作日（${wd5Label}）前与上级预约月度绩效沟通会议，未完成沟通将影响当月绩效工资发放`);
+
+  add(nthWork(y,m,2), '团队月度复盘会', 'review', '团队', null,
+    '请主动联系上级，预约并安排本次月度复盘会议');
+
+  add(wd5, '上级完成上月 OKR 评分 & 确认本月 OKR', 'plan', '上级', '18:00',
+    '与各成员进行 1v1，确认本月绩效结果');
+
+  workFridays(y,m).forEach(f => add(f, 'OKR 进展更新 & 周度复盘', 'track', '员工', '18:00',
+    '在 OKR 系统上更新本周进度，并提交 OKR 进展报告'));
+
+  add(lastNthWork(y,m,3), '启动下月 OKR 制定 & 开始本月自评', 'review', '员工', null,
+    '在 OKR 系统上开始起草下月 OKR，并撰写本月 OKR 复盘文档');
+
+  add(lastNthWork(y,m,1), '提交自评文档 & 下月 OKR 初稿 & 文化自评问卷', 'review', '员工', null,
+    '在 OKR 系统上提交本月 OKR 复盘文档，并发布下月 OKR；另需填写文化自评问卷：',
+    {text: '点击填写', url: 'https://n6fo0mbcz6.feishu.cn/share/base/form/shrcnOUGAuZGNRck8PbwBvcHevf'});
 
   evs.sort((a,b) => a.date - b.date);
   return evs;
@@ -171,10 +204,16 @@ const WD = ['日','一','二','三','四','五','六'];
 
 function card(ev, past, today) {
   const dl = `${ev.date.getMonth()+1}月${ev.date.getDate()}日（周${WD[ev.date.getDay()]}）`;
+  const linkHtml = ev.link ? `&nbsp;<a class="ev-link" href="${ev.link.url}" target="_blank">${ev.link.text} →</a>` : '';
+  const descHtml = ev.desc ? `<div class="ev-desc">${ev.desc}${linkHtml}</div>` : '';
   return `<div class="ev ${ev.phase}${past?' past':''}${today?' today':''}">
-    <div class="ev-date">${dl}${ev.time?`<span class="ev-time">${ev.time}</span>`:''}${today?'<span class="ev-now">今天</span>':''}</div>
-    <div class="ev-label">${ev.label}</div>
-    <div class="ev-tags"><span class="tag ${ev.phase}">${PL[ev.phase]}</span><span class="tag role-${ev.role}">${ev.role}</span></div>
+    <div class="ev-accent"></div>
+    <div class="ev-body">
+      <div class="ev-date">${dl}${ev.time?`<span class="ev-time">${ev.time}</span>`:''}${today?'<span class="ev-now">今天</span>':''}</div>
+      <div class="ev-label">${ev.label}</div>
+      <div class="ev-tags"><span class="tag ${ev.phase}">${PL[ev.phase]}</span><span class="tag role-${ev.role}">${ev.role}</span></div>
+      ${descHtml}
+    </div>
   </div>`;
 }
 
@@ -208,7 +247,8 @@ function renderCol(y, m, isCur, today) {
 
   return `<div class="col${isCur?' cur':''}">
     <div class="col-hdr">
-      <div class="col-name">${String(y).slice(2)}年${m}月</div>
+      <div class="col-year">${String(y).slice(2)}年</div>
+      <div class="col-month">${m}月</div>
       ${isCur?'<span class="cur-badge">本月</span>':''}
     </div>
     <div class="evlist">${html}</div>
@@ -230,10 +270,10 @@ function render() {
       <div class="hdr-date">今天：${cy}年${cm}月${t.getDate()}日&nbsp;周${WD[t.getDay()]}</div>
     </div>
     <div class="legend">
-      <div class="leg-item"><div class="leg-dot" style="background:var(--plan)"></div>制定</div>
-      <div class="leg-item"><div class="leg-dot" style="background:var(--track)"></div>跟进</div>
-      <div class="leg-item"><div class="leg-dot" style="background:var(--review)"></div>复盘</div>
-      <div class="leg-item"><div class="leg-dot" style="background:var(--cult)"></div>文化问卷</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--plan-bg)"></div>制定</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--track-bg)"></div>跟进</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--review-bg)"></div>复盘</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--cult-bg)"></div>文化问卷</div>
     </div>
     <div class="wrap"><div class="grid">${cols.join('')}</div></div>`;
 }

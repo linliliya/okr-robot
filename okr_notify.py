@@ -116,24 +116,37 @@ WEEKDAY_ZH  = ["一", "二", "三", "四", "五", "六", "日"]
 def get_events_for_month(year: int, month: int) -> list[dict]:
     events = []
 
-    def add(d, label, phase, role, time=None, warnings=None):
+    def add(d, label, phase, role, time=None, desc=None, link=None):
         if d:
             events.append({"date": d, "label": label, "phase": phase,
-                            "role": role, "time": time, "warnings": warnings or []})
+                            "role": role, "time": time, "desc": desc, "link": link})
 
-    add(nth_workday(year, month, 1), "上级提交文化评价问卷",             "cult",   "上级")
-    add(nth_workday(year, month, 2), "团队月度复盘会",                   "review", "团队", warnings=[
-        "请尽快和上级预约会议",
-        "如因个人原因未及时约会议，导致绩效无法有效评估，可能影响薪资正常发放",
-    ])
-    add(nth_workday(year, month, 3), "上级完成上月 OKR 评分 & 确认本月 OKR", "plan",   "上级", "18:00")
+    wd5 = nth_workday(year, month, 5)
+    wd5_label = f"{wd5.month}月{wd5.day}日" if wd5 else "第5个工作日"
+
+    add(nth_workday(year, month, 1), "上级提交文化评价问卷", "cult", "上级",
+        desc="请填写对团队成员的文化评价问卷",
+        link={"text": "点击填写", "url": "https://n6fo0mbcz6.feishu.cn/share/base/form/shrcnXu5NLgrWDKrcA9E34E8IFf"})
+
+    add(nth_workday(year, month, 1), "预约上级 1v1 月度绩效沟通", "review", "员工",
+        desc=f"请在本月第5个工作日（{wd5_label}）前与上级预约月度绩效沟通会议，未完成沟通将影响当月绩效工资发放")
+
+    add(nth_workday(year, month, 2), "团队月度复盘会", "review", "团队",
+        desc="请主动联系上级，预约并安排本次月度复盘会议")
+
+    add(wd5, "上级完成上月 OKR 评分 & 确认本月 OKR", "plan", "上级", time="18:00",
+        desc="与各成员进行 1v1，确认本月绩效结果")
+
     for fri in work_fridays(year, month):
-        add(fri,                     "OKR 进展更新 & 周度复盘",          "track",  "员工", "18:00")
-    add(last_nth_workday(year, month, 3), "启动下月 OKR 制定 & 开始本月自评",        "review", "员工")
-    add(last_nth_workday(year, month, 1), "提交自评文档 & 下月 OKR 初稿 & 文化自评问卷", "review", "员工", warnings=[
-        "请务必在截止日前完成提交",
-        "如未及时提交，绩效结果将无法生成，会影响正常绩效工资的发放",
-    ])
+        add(fri, "OKR 进展更新 & 周度复盘", "track", "员工", time="18:00",
+            desc="在 OKR 系统上更新本周进度，并提交 OKR 进展报告")
+
+    add(last_nth_workday(year, month, 3), "启动下月 OKR 制定 & 开始本月自评", "review", "员工",
+        desc="在 OKR 系统上开始起草下月 OKR，并撰写本月 OKR 复盘文档")
+
+    add(last_nth_workday(year, month, 1), "提交自评文档 & 下月 OKR 初稿 & 文化自评问卷", "review", "员工",
+        desc="在 OKR 系统上提交本月 OKR 复盘文档，并发布下月 OKR；另需填写文化自评问卷：",
+        link={"text": "点击填写", "url": "https://n6fo0mbcz6.feishu.cn/share/base/form/shrcnOUGAuZGNRck8PbwBvcHevf"})
 
     events.sort(key=lambda e: e["date"])
     return events
@@ -198,20 +211,19 @@ def get_bot_chat_ids(token: str) -> list[str]:
 
 
 def send_message(token: str, receive_id_type: str, receive_id: str,
-                 events: list[dict], today: date, audience: str = "同学") -> None:
-    """发送一条 post 富文本消息（content 字段需 JSON 序列化为字符串）"""
+                 events: list[dict], today: date) -> None:
     weekday = WEEKDAY_ZH[today.weekday()]
     lines = []
     lines.append([{"tag": "text",
-                   "text": f"今天共有 {len(events)} 项 OKR 事务，请相关{audience}及时处理："}])
+                   "text": f"今天共有 {len(events)} 项 OKR 事务，请相关同学及时处理："}])
     lines.append([{"tag": "text", "text": ""}])
     for ev in events:
-        lines.append([{"tag": "text",
-                       "text": f"❗️ 事项：【{PHASE_LABEL[ev['phase']]}】{ev['label']}"}])
-        if ev["time"]:
-            lines.append([{"tag": "text", "text": f"⏰ 到期时间：{ev['time']} 前"}])
-        for w in ev.get("warnings", []):
-            lines.append([{"tag": "text", "text": f"⚠️ {w}"}])
+        time_text = f"  |  {ev['time']} 前" if ev["time"] else ""
+        lines.append([{"tag": "text", "text": f"【{PHASE_LABEL[ev['phase']]}】{ev['label']}{time_text}"}])
+        if ev.get("desc"):
+            lines.append([{"tag": "text", "text": f"  {ev['desc']}"}])
+        if ev.get("link"):
+            lines.append([{"tag": "a", "text": f"  {ev['link']['url']}", "href": ev["link"]["url"]}])
         lines.append([{"tag": "text", "text": ""}])
 
     content_obj = {
@@ -258,7 +270,7 @@ if __name__ == "__main__":
             print("⚠️  有上级事务但未配置 FEISHU_MANAGER_IDS，跳过私信")
         else:
             for uid in manager_ids:
-                send_message(token, "open_id", uid, manager_events, today, audience="上级")
+                send_message(token, "open_id", uid, manager_events, today)
             print(f"✅ 上级私信 → {len(manager_ids)} 人，共 {len(manager_events)} 项事务")
 
     # 员工/团队事件 → 群发
