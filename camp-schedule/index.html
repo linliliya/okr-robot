@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>爬虫训练营排期</title>
+<style>
+:root {
+  --open:    #1d4ed8; --open-bg:    #dbeafe; --open-muted:    #eff6ff;
+  --regular: #15803d; --regular-bg: #bbf7d0; --regular-muted: #f0fdf4;
+  --exam:    #b45309; --exam-bg:    #fde68a; --exam-muted:    #fffbeb;
+  --close:   #6d28d9; --close-bg:   #ddd6fe; --close-muted:   #f5f3ff;
+  --rest:    #475569; --rest-bg:    #e2e8f0; --rest-muted:    #f8fafc;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,'PingFang SC','Helvetica Neue',sans-serif;background:#f0f4f8;color:#1e293b;font-size:14px;line-height:1.5}
+button{font-family:inherit}
+
+/* ── Header ── */
+.hdr{background:#1e293b;padding:16px 28px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:99;gap:12px;flex-wrap:wrap}
+.hdr-title{font-size:16px;font-weight:700;color:#f8fafc;letter-spacing:.2px}
+.hdr-date{font-size:12px;color:#94a3b8}
+
+/* ── Legend ── */
+.legend{background:#fff;border-bottom:1px solid #e2e8f0;padding:10px 28px;display:flex;gap:18px;flex-wrap:wrap;align-items:center}
+.leg-item{display:flex;align-items:center;gap:6px;font-size:12px;color:#475569;font-weight:500}
+.leg-dot{width:9px;height:9px;border-radius:3px;flex-shrink:0}
+
+.wrap{padding:24px 28px;max-width:1440px;margin:0 auto}
+.sec-row{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:4px 0 12px;flex-wrap:wrap}
+.sec-title{font-size:13px;font-weight:700;color:#64748b;letter-spacing:.5px}
+.sec-actions{display:flex;gap:8px}
+.btn{border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer}
+.btn.primary{background:#2563eb;color:#fff}
+.btn.primary:hover{background:#1d4ed8}
+.btn.ghost{background:#fff;color:#475569;border:1px solid #e2e8f0}
+.btn.ghost:hover{background:#f8fafc}
+.btn.danger{background:#fee2e2;color:#b91c1c}
+.btn.danger:hover{background:#fecaca}
+
+/* ── Running summary ── */
+.runbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.runchip{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:8px 14px;font-size:12px;color:#475569;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.runchip b{color:#0f172a;font-size:13px;margin-right:6px}
+.runchip .rc-week{font-weight:700;margin-left:6px}
+.runchip .rc-week.open{color:var(--open)}
+.runchip .rc-week.regular{color:var(--regular)}
+.runchip .rc-week.exam{color:var(--exam)}
+.runchip .rc-week.close{color:var(--close)}
+.runchip .rc-week.rest{color:var(--rest)}
+.runchip .rc-week.idle{color:#94a3b8}
+
+/* ── Timeline overview ── */
+.tl{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:18px 20px 14px;box-shadow:0 1px 4px rgba(0,0,0,.05);margin-bottom:26px;overflow-x:auto}
+.tl-inner{min-width:680px}
+.tl-row{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.tl-label{width:52px;flex-shrink:0;font-size:13px;font-weight:700;color:#0f172a;text-align:right}
+.tl-bar{flex:1;position:relative;height:26px}
+.tl-seg{position:absolute;top:0;height:26px;border-radius:5px;cursor:pointer;border:1px solid rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;overflow:hidden;white-space:nowrap}
+.tl-seg:hover{filter:brightness(.94)}
+.tl-seg.open{background:var(--open-bg);color:var(--open)}
+.tl-seg.regular{background:var(--regular-bg);color:var(--regular)}
+.tl-seg.exam{background:var(--exam-bg);color:var(--exam)}
+.tl-seg.close{background:var(--close-bg);color:var(--close)}
+.tl-seg.rest{background:var(--rest-bg);color:var(--rest)}
+.tl-seg.cur-seg{outline:2px solid #f59e0b;outline-offset:1px;z-index:2}
+.tl-axis{position:relative;height:18px;margin-left:64px}
+.tl-tick{position:absolute;top:0;font-size:10px;color:#94a3b8;transform:translateX(-50%);font-weight:500}
+.tl-today{position:absolute;top:-4px;bottom:-4px;width:2px;background:#ef4444;border-radius:2px;z-index:3;pointer-events:none}
+.tl-today-tag{position:absolute;top:-22px;transform:translateX(-50%);font-size:10px;font-weight:700;background:#ef4444;color:#fff;padding:1px 7px;border-radius:9px;white-space:nowrap}
+.tl-barwrap{position:relative;padding-top:22px}
+
+/* ── Today panel ── */
+.today-sec{background:#fff;border:1px solid #fde68a;border-top:3px solid #f59e0b;border-radius:14px;padding:16px 20px 12px;box-shadow:0 1px 4px rgba(0,0,0,.05);margin-bottom:26px}
+.td-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.td-block{min-width:0}
+.td-camp{font-size:14px;font-weight:800;color:#0f172a;margin-bottom:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.td-week{font-size:11px;font-weight:700;padding:2px 8px;border-radius:5px}
+.td-week.open{background:var(--open-bg);color:var(--open)}
+.td-week.regular{background:var(--regular-bg);color:var(--regular)}
+.td-week.exam{background:var(--exam-bg);color:var(--exam)}
+.td-week.close{background:var(--close-bg);color:var(--close)}
+.td-week.rest{background:var(--rest-bg);color:var(--rest)}
+.td-none{font-size:12px;color:#94a3b8;padding:4px 0}
+.td-count{font-size:11px;color:#94a3b8;font-weight:600;margin-left:auto}
+.td-count.all-done{color:#16a34a}
+.td-overdue-hdr{font-size:11px;font-weight:800;color:#b91c1c;letter-spacing:.4px;margin:6px 0 2px}
+.followsec{margin-top:14px;border-top:1px dashed #fbbf24;padding-top:10px}
+.follow-hdr{font-size:12px;font-weight:800;color:#b45309;margin-bottom:2px}
+.follow-camp{font-size:10px;font-weight:700;background:#f1f5f9;color:#475569;padding:1px 6px;border-radius:4px;margin-right:6px;vertical-align:1px}
+.td-note{font-size:11px;color:#94a3b8;margin-top:12px;border-top:1px dashed #e2e8f0;padding-top:8px}
+
+/* ── Camp cards ── */
+.camps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;align-items:start}
+.camp{background:#fff;border:1px solid #e2e8f0;border-radius:14px;box-shadow:0 1px 4px rgba(0,0,0,.05);overflow:hidden}
+.camp.cur{border-color:#93c5fd;box-shadow:0 0 0 3px #dbeafe,0 2px 8px rgba(37,99,235,.1)}
+.camp.ended{opacity:.75}
+.camp-hdr{padding:16px 20px 14px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.camp.ended .camp-hdr{border-bottom:none}
+.camp-term{font-size:20px;font-weight:800;color:#0f172a;letter-spacing:-.3px}
+.camp-dates{font-size:12px;color:#94a3b8;margin-top:3px;font-weight:500}
+.camp-acts{display:flex;gap:6px;margin-top:8px}
+.mini-btn{border:none;background:#f1f5f9;color:#64748b;font-size:11px;font-weight:600;padding:3px 9px;border-radius:6px;cursor:pointer}
+.mini-btn:hover{background:#e2e8f0;color:#334155}
+.camp-status{text-align:right;flex-shrink:0}
+.status-badge{display:inline-block;font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px}
+.status-badge.open{background:var(--open-bg);color:var(--open)}
+.status-badge.regular{background:var(--regular-bg);color:var(--regular)}
+.status-badge.exam{background:var(--exam-bg);color:var(--exam)}
+.status-badge.close{background:var(--close-bg);color:var(--close)}
+.status-badge.rest{background:var(--rest-bg);color:var(--rest)}
+.status-badge.idle{background:#f1f5f9;color:#64748b}
+.status-sub{font-size:11px;color:#94a3b8;margin-top:5px}
+
+/* week dots nav */
+.wknav{display:flex;gap:4px;padding:12px 20px 0;flex-wrap:wrap}
+.wkdot{min-width:30px;height:24px;padding:0 4px;border-radius:6px;border:none;font-size:11px;font-weight:700;cursor:pointer}
+.wkdot.open{background:var(--open-muted);color:var(--open)}
+.wkdot.regular{background:var(--regular-muted);color:var(--regular)}
+.wkdot.exam{background:var(--exam-muted);color:var(--exam)}
+.wkdot.close{background:var(--close-muted);color:var(--close)}
+.wkdot.rest{background:var(--rest-muted);color:var(--rest)}
+.wkdot:hover{filter:brightness(.93)}
+.wkdot.viewing{outline:2px solid #94a3b8;outline-offset:-1px}
+.wkdot.now{outline:2px solid #f59e0b;outline-offset:-1px}
+.wkdot.past{opacity:.45}
+
+/* week panel */
+.wkpanel{padding:14px 20px 18px}
+.wk-title{display:flex;align-items:baseline;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.wk-name{font-size:15px;font-weight:800;color:#0f172a}
+.wk-range{font-size:12px;color:#94a3b8;font-weight:500}
+.wk-sub{font-size:11px;font-weight:700;padding:2px 8px;border-radius:5px}
+.wk-sub.exam{background:var(--exam-bg);color:var(--exam)}
+.wk-sub.close{background:var(--close-bg);color:var(--close)}
+.wk-sub.rest{background:var(--rest-bg);color:var(--rest)}
+.wk-sub.now{background:#fef3c7;color:#92400e}
+.wk-progress{font-size:11px;color:#94a3b8;font-weight:600;margin-left:auto}
+.wk-progress.all-done{color:#16a34a}
+
+.daygrp{margin-bottom:12px}
+.day-hdr{font-size:11px;font-weight:700;color:#64748b;letter-spacing:.4px;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.day-hdr .day-today{font-size:10px;font-weight:700;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:4px}
+.daygrp.is-today{background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:8px 10px;margin-left:-10px;margin-right:-10px}
+.task{display:flex;gap:9px;padding:5px 0;align-items:flex-start}
+.ckb{width:16px;height:16px;border-radius:5px;border:1.5px solid #cbd5e1;background:#fff;cursor:pointer;flex-shrink:0;margin-top:2.5px;padding:0;position:relative}
+.ckb:hover{border-color:#64748b}
+.ckb.on{background:#16a34a;border-color:#16a34a}
+.ckb.on::after{content:'✓';color:#fff;font-size:11px;font-weight:800;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;line-height:1}
+.task.done .task-t{text-decoration:line-through;color:#94a3b8}
+.task.done .task-d{color:#cbd5e1}
+.task-time{font-size:12px;font-weight:800;color:#dc2626;margin-right:6px}
+.task-late{font-size:10px;font-weight:700;background:#fee2e2;color:#b91c1c;padding:1px 6px;border-radius:4px;margin-left:6px;vertical-align:1px}
+.task-body{flex:1;min-width:0}
+.task-t{font-size:13px;font-weight:600;color:#0f172a;line-height:1.5}
+.task-t .task-tag{font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;margin-left:6px;vertical-align:1px}
+.task-tag.exam{background:var(--exam-bg);color:var(--exam)}
+.task-tag.close{background:var(--close-bg);color:var(--close)}
+.task-tag.open{background:var(--open-bg);color:var(--open)}
+.task-d{font-size:12px;color:#64748b;margin-top:2px;line-height:1.6}
+.task-link{font-size:12px;color:#2563eb;text-decoration:none;font-weight:500}
+.task-link:hover{text-decoration:underline}
+
+/* ── Empty state ── */
+.empty{background:#fff;border:1px dashed #cbd5e1;border-radius:14px;padding:48px 20px;text-align:center;color:#94a3b8;font-size:13px}
+.empty .btn{margin-top:14px}
+
+/* ── Modal form ── */
+.overlay{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:200;display:flex;align-items:flex-start;justify-content:center;padding:60px 16px}
+.modal{background:#fff;border-radius:16px;width:100%;max-width:460px;padding:22px 24px;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+.modal-title{font-size:16px;font-weight:800;color:#0f172a;margin-bottom:18px}
+.f-row{margin-bottom:16px}
+.f-label{font-size:12px;font-weight:700;color:#475569;margin-bottom:6px;display:block}
+.f-input{width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px 12px;font-size:14px;font-family:inherit;color:#0f172a}
+.f-input:focus{outline:2px solid #93c5fd;border-color:#93c5fd}
+.f-hint{font-size:11px;color:#94a3b8;margin-top:5px;line-height:1.5}
+.f-hint.warn{color:#b45309;font-weight:600}
+.skipchips{display:flex;gap:6px;flex-wrap:wrap}
+.skipchip{min-width:34px;height:28px;border-radius:7px;border:1px solid #e2e8f0;background:#f8fafc;color:#64748b;font-size:12px;font-weight:700;cursor:pointer}
+.skipchip:hover{background:#f1f5f9}
+.skipchip.on{background:var(--rest-bg);border-color:#94a3b8;color:#1e293b}
+.modal-acts{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+.modal-acts .spacer{flex:1}
+
+@media(max-width:1100px){.camps,.td-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){.camps,.td-grid{grid-template-columns:1fr}}
+@media(max-width:520px){.wrap{padding:16px 14px}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<div id="modal-root"></div>
+<script src="data.js"></script>
+<script>
+// ── Date helpers ─────────────────────────────────────────────────────────────
+const DAY_MS = 86400000;
+const WD = ['日','一','二','三','四','五','六'];
+function parseD(s){ const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); }
+function addD(d,n){ const r = new Date(d); r.setDate(r.getDate()+n); return r; }
+function fmt(d){ return `${d.getMonth()+1}月${d.getDate()}日`; }
+function fmtS(d){ return `${d.getMonth()+1}/${d.getDate()}`; }
+function dayDiff(a,b){ return Math.round((b-a)/DAY_MS); }
+
+// ── 营期数据：localStorage 持久化 + URL 分享 ─────────────────────────────────
+// URL 格式：#5:2026-06-07:6.8,6:2026-08-30 （期数:开营日:跳过周.跳过周）
+const LS_KEY = 'crawler-camps-v1';
+
+function parseShare(s){
+  try{
+    const arr = s.split(',').map(part => {
+      const [term, date, skips] = part.split(':');
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(date) || !(parseInt(term) >= 1)) throw 0;
+      return { term: parseInt(term), openDate: date,
+               skips: skips ? skips.split('.').map(Number).filter(n => n>=1 && n<=12) : [] };
+    });
+    return arr.length ? arr : null;
+  }catch(e){ return null; }
+}
+function loadCamps(){
+  const fromHash = parseShare(decodeURIComponent(location.hash.replace(/^#/,'')));
+  if(fromHash){ localStorage.setItem(LS_KEY, JSON.stringify(fromHash)); return fromHash; }
+  try{ return JSON.parse(localStorage.getItem(LS_KEY)) || []; }catch(e){ return []; }
+}
+let camps = loadCamps();
+
+function persist(){
+  localStorage.setItem(LS_KEY, JSON.stringify(camps));
+  const h = camps.map(c =>
+    `${c.term}:${c.openDate}${c.skips && c.skips.length ? ':'+[...c.skips].sort((a,b)=>a-b).join('.') : ''}`
+  ).join(',');
+  history.replaceState(null, '', camps.length ? '#'+h : location.pathname);
+}
+persist();  // 让 URL 与当前数据保持一致
+
+// ── 任务完成状态（存本浏览器，不随链接分享）──────────────────────────────────
+const DONE_KEY = 'crawler-camps-done-v1';
+let done = {};
+try{ done = JSON.parse(localStorage.getItem(DONE_KEY)) || {}; }catch(e){ done = {}; }
+
+// 任务标识：期数 + 周段名 + 任务标题（SOP 改标题会重置该任务的勾选状态，可接受）
+function taskId(term, w, task){ return `${term}|${w.label}|${task.day}|${task.t}`; }
+
+// onclick 里传下标而不是原文，避免标题里的特殊字符破坏 HTML
+let REG = [];
+function ckId(id){ REG.push(id); return REG.length - 1; }
+function toggleDone(i){
+  const id = REG[i];
+  if(done[id]) delete done[id]; else done[id] = 1;
+  localStorage.setItem(DONE_KEY, JSON.stringify(done));
+  render();
+}
+
+// 时间字符串 → 分钟数，用于今日待办排序
+function timeMin(task){
+  if(!task.time) return 9999;
+  const m = task.time.match(/(\d{1,2}):(\d{2})/);
+  if(m) return +m[1]*60 + +m[2];
+  if(task.time.includes('上午')) return 9*60;
+  if(task.time.includes('下午')) return 14*60;
+  if(task.time.includes('晚')) return 19*60;
+  if(task.time.includes('直播后')) return 21*60+30;
+  return 9999;
+}
+
+// ── Camp model ───────────────────────────────────────────────────────────────
+// 周段 = 开营周 + 第1~12周；skips 里的课程周之前插入一个「休息周」（长假顺延）
+function campWeeks(camp){
+  const open = parseD(camp.openDate);
+  const mon0 = addD(open, -((open.getDay()+6)%7));   // 开营周的周一
+  const weeks = [{ label:'开营周', short:'开', type:'open', mon:mon0 }];
+  const skips = new Set(camp.skips || []);
+  let mon = addD(mon0, 7);
+  for(let n=1; n<=12; n++){
+    if(skips.has(n)){
+      weeks.push({ label:'休息周', short:'休', type:'rest', sub:'长假顺延', mon });
+      mon = addD(mon, 7);
+    }
+    let type='regular', sub=null;
+    if(n===4){ type='exam'; sub='工信部考试报名'; }
+    if(n===5){ type='exam'; sub='工信部考试周 · 接单测评'; }
+    if(n===12){ type='close'; sub='结营周'; }
+    weeks.push({ label:`第${n}周`, short:String(n), type, sub, mon, n });
+    mon = addD(mon, 7);
+  }
+  weeks.forEach(w => w.sun = addD(w.mon,6));
+  return weeks;
+}
+// 今天处于该营期的哪一段：-1=未开始，0~len-1=周段下标，len=已结营
+function campPos(weeks, today){
+  const i = Math.floor(dayDiff(weeks[0].mon, today)/7);
+  return i < 0 ? -1 : (i >= weeks.length ? weeks.length : i);
+}
+function weekTasks(w){
+  if(w.type==='open') return SOP_OPEN;
+  if(w.type==='rest') return SOP_REST;
+  if(w.n===12) return SOP_CLOSING;
+  return SOP_REGULAR.concat(SOP_EXTRAS[w.n] || []);
+}
+
+// ── Render: task list of one week ────────────────────────────────────────────
+const DAY_ORDER = [1,2,3,4,5,6,0,'all'];
+const DAY_LABEL = { 1:'周一',2:'周二',3:'周三',4:'周四',5:'周五',6:'周六',0:'周日', all:'全周 / 日常' };
+
+function taskHtml(task, term, w, opts={}){
+  const id = taskId(term, w, task);
+  const isDone = !!done[id];
+  const link = task.link && LINKS[task.link]
+    ? ` <a class="task-link" href="${LINKS[task.link].url}" target="_blank">${LINKS[task.link].text}</a>` : '';
+  const tag = task.tag ? `<span class="task-tag ${task.tag}">${task.tag==='exam'?'考试':task.tag==='close'?'结营':'开营'}</span>` : '';
+  const time = task.time ? `<span class="task-time">${task.time}</span>` : '';
+  const late = opts.overdue && !isDone
+    ? `<span class="task-late">逾期${opts.lateDay ? ' · '+opts.lateDay : ''}</span>` : '';
+  const campTag = opts.campTag ? `<span class="follow-camp">${opts.campTag}</span>` : '';
+  return `<div class="task${isDone?' done':''}">
+    <button class="ckb${isDone?' on':''}" title="${isDone?'取消完成':'标记完成'}" onclick="toggleDone(${ckId(id)})"></button>
+    <div class="task-body">
+      <div class="task-t">${campTag}${time}${task.t}${tag}${late}</div>
+      ${task.d ? `<div class="task-d">${task.d}${link}</div>` : (link ? `<div class="task-d">${link}</div>` : '')}
+    </div>
+  </div>`;
+}
+
+function weekPanel(term, weeks, viewIdx, posIdx, today){
+  const w = weeks[viewIdx];
+  const tasks = weekTasks(w);
+  const isCurWeek = viewIdx === posIdx;
+  const weekPast = viewIdx < posIdx;
+  const todayPos = (today.getDay()+6)%7;
+  // 开营周的「全周」任务是开营前的准备工作，排在具体日期任务之前
+  const dayOrder = w.type === 'open' ? ['all',1,2,3,4,5,6,0] : DAY_ORDER;
+  const groups = dayOrder.map(day => {
+    const items = tasks.filter(t => t.day === day);
+    if(!items.length) return '';
+    let dayLabel = (w.type === 'open' && day === 'all') ? '开营前准备' : DAY_LABEL[day];
+    if(typeof day === 'number') dayLabel += ` ${fmtS(addD(w.mon, (day+6)%7))}`;
+    const isToday = isCurWeek && typeof day === 'number' && day === today.getDay();
+    const overdue = typeof day === 'number' && (weekPast || (isCurWeek && (day+6)%7 < todayPos));
+    return `<div class="daygrp${isToday?' is-today':''}">
+      <div class="day-hdr">${dayLabel}${isToday?'<span class="day-today">今天</span>':''}</div>
+      ${items.map(t => taskHtml(t, term, w, {overdue})).join('')}
+    </div>`;
+  }).join('');
+
+  const doneCount = tasks.filter(t => done[taskId(term, w, t)]).length;
+  return `<div class="wkpanel">
+    <div class="wk-title">
+      <span class="wk-name">${w.label}</span>
+      <span class="wk-range">${fmt(w.mon)} – ${fmt(w.sun)}</span>
+      ${w.sub ? `<span class="wk-sub ${w.type}">${w.sub}</span>` : ''}
+      ${isCurWeek ? '<span class="wk-sub now">本周</span>' : ''}
+      <span class="wk-progress${doneCount===tasks.length?' all-done':''}">已完成 ${doneCount}/${tasks.length}</span>
+    </div>
+    ${groups}
+  </div>`;
+}
+
+// ── Render: one camp card ────────────────────────────────────────────────────
+const viewState = {};  // term -> 正在查看的周段下标
+
+function statusInfo(weeks, pos){
+  if(pos === -1) return { cls:'idle', text:'未开始', sub:`${fmt(weeks[0].mon)} 进入开营周` };
+  if(pos === weeks.length) return { cls:'idle', text:'已结营', sub:`${fmt(weeks[weeks.length-1].sun)} 结营` };
+  const w = weeks[pos];
+  return { cls:w.type, text:w.label + (w.sub ? ` · ${w.sub}` : ''), sub: w.n ? '共 12 周' : null };
+}
+
+function campCard(camp, today){
+  const weeks = campWeeks(camp);
+  const pos = campPos(weeks, today);
+  const ended = pos === weeks.length;
+  const active = pos >= 0 && !ended;
+  const st = statusInfo(weeks, pos);
+
+  const acts = `<div class="camp-acts">
+    <button class="mini-btn" onclick="openForm(${camp.term})">编辑</button>
+    <button class="mini-btn" onclick="deleteCamp(${camp.term})">删除</button>
+  </div>`;
+
+  const hdr = `<div class="camp-hdr">
+    <div>
+      <div class="camp-term">第 ${camp.term} 期</div>
+      <div class="camp-dates">${fmt(parseD(camp.openDate))} 开营 · ${fmt(weeks[weeks.length-1].sun)} 结营${camp.skips && camp.skips.length ? ` · 休 ${camp.skips.length} 周` : ''}</div>
+      ${acts}
+    </div>
+    <div class="camp-status">
+      <span class="status-badge ${st.cls}">${st.text}</span>
+      ${st.sub ? `<div class="status-sub">${st.sub}</div>` : ''}
+    </div>
+  </div>`;
+
+  // 已结营：只保留头部一行，减少视觉噪音
+  if(ended) return `<div class="camp ended" id="camp-${camp.term}">${hdr}</div>`;
+
+  if(!(camp.term in viewState) || viewState[camp.term] >= weeks.length)
+    viewState[camp.term] = active ? pos : 0;
+  const viewIdx = viewState[camp.term];
+
+  const dots = weeks.map((w,i) => {
+    const cls = ['wkdot', w.type];
+    if(i === viewIdx) cls.push('viewing');
+    if(i === pos) cls.push('now');
+    if(i < pos) cls.push('past');
+    return `<button class="${cls.join(' ')}" title="${w.label} ${fmtS(w.mon)}–${fmtS(w.sun)}"
+      onclick="setView(${camp.term},${i})">${w.short}</button>`;
+  }).join('');
+
+  return `<div class="camp${active?' cur':''}" id="camp-${camp.term}">
+    ${hdr}
+    <div class="wknav">${dots}</div>
+    ${weekPanel(camp.term, weeks, viewIdx, pos, today)}
+  </div>`;
+}
+
+function setView(term, idx){
+  viewState[term] = idx;
+  render();
+  const el = document.getElementById(`camp-${term}`);
+  if(el) el.scrollIntoView({ block:'nearest' });
+}
+
+// ── Render: overview timeline ────────────────────────────────────────────────
+function timeline(campsData, today){
+  const start = new Date(Math.min(...campsData.map(c => c.weeks[0].mon)));
+  const end = addD(new Date(Math.max(...campsData.map(c => c.weeks[c.weeks.length-1].sun))), 1);
+  const total = dayDiff(start, end);
+  const pct = d => (dayDiff(start, d) / total * 100).toFixed(3);
+
+  const rows = campsData.map(({camp, weeks, pos}) => {
+    const segs = weeks.map((w,i) => {
+      return `<div class="tl-seg ${w.type}${i===pos?' cur-seg':''}" style="left:${pct(w.mon)}%;width:${(7/total*100).toFixed(3)}%"
+        title="第${camp.term}期 ${w.label} ${fmtS(w.mon)}–${fmtS(w.sun)}"
+        onclick="setView(${camp.term},${i})">${w.short}</div>`;
+    }).join('');
+    return `<div class="tl-row"><div class="tl-label">第${camp.term}期</div><div class="tl-bar">${segs}</div></div>`;
+  }).join('');
+
+  let ticks = '';
+  const t = new Date(start.getFullYear(), start.getMonth()+1, 1);
+  while(t < end){
+    ticks += `<div class="tl-tick" style="left:${pct(t)}%">${t.getMonth()+1}月</div>`;
+    t.setMonth(t.getMonth()+1);
+  }
+
+  const todayLine = (today >= start && today < end)
+    ? `<div class="tl-today" style="left:calc(64px + (100% - 64px) * ${(dayDiff(start,today)+0.5)/total})">
+         <div class="tl-today-tag">今天</div></div>`
+    : '';
+
+  return `<div class="tl"><div class="tl-inner"><div class="tl-barwrap">${todayLine}${rows}
+    <div class="tl-axis">${ticks}</div>
+  </div></div></div>`;
+}
+
+// ── Render: today panel ──────────────────────────────────────────────────────
+function todaySection(campsData, today){
+  const running = campsData.filter(c => c.pos >= 0 && c.pos < c.weeks.length);
+  const todayPos = (today.getDay()+6)%7;
+
+  // 跟进池：已到期的 follow 任务（寄证书、寄奖品等），勾掉前一直显示（含已结营的期）
+  const followHtml = campsData.flatMap(({camp, weeks}) =>
+    weeks.flatMap(w => w.mon > today ? [] :
+      weekTasks(w).filter(t => t.follow && !done[taskId(camp.term, w, t)])
+        .map(t => taskHtml(t, camp.term, w, {campTag:`第${camp.term}期`}))
+    )
+  ).join('');
+
+  if(!running.length && !followHtml) return '';
+
+  const blocks = running.map(({camp, weeks, pos}) => {
+    const w = weeks[pos];
+    const all = weekTasks(w);
+    // 本周已过去的天里没勾掉的任务 → 逾期，排最前
+    const overdueHtml = all
+      .filter(t => typeof t.day === 'number' && (t.day+6)%7 < todayPos && !done[taskId(camp.term, w, t)])
+      .map(t => taskHtml(t, camp.term, w, {overdue:true, lateDay:'周'+WD[t.day]})).join('');
+    const items = all.filter(t => t.day === today.getDay() && !t.follow)
+      .sort((a,b) => timeMin(a) - timeMin(b));
+    const doneCount = items.filter(t => done[taskId(camp.term, w, t)]).length;
+    const list = items.length
+      ? items.map(t => taskHtml(t, camp.term, w)).join('')
+      : '<div class="td-none">今天无固定动作，日常督学 / 答疑照常</div>';
+    return `<div class="td-block">
+      <div class="td-camp">第 ${camp.term} 期<span class="td-week ${w.type}">${w.label}${w.sub ? ' · '+w.sub : ''}</span>
+        ${items.length ? `<span class="td-count${doneCount===items.length?' all-done':''}">${doneCount}/${items.length}</span>` : ''}</div>
+      ${overdueHtml ? `<div class="td-overdue-hdr">本周逾期未完成</div>${overdueHtml}` : ''}
+      ${overdueHtml && items.length ? '<div class="td-overdue-hdr" style="color:#64748b">今天</div>' : ''}
+      ${list}
+    </div>`;
+  }).join('');
+
+  return `<div class="sec-row"><div class="sec-title">今日待办 · 周${WD[today.getDay()]}</div></div>
+    <div class="today-sec">
+      ${blocks ? `<div class="td-grid">${blocks}</div>` : ''}
+      ${followHtml ? `<div class="followsec"><div class="follow-hdr">持续跟进 · 完成后勾掉</div>${followHtml}</div>` : ''}
+      <div class="td-note">「全周 / 日常」类任务（学员接待、督学、答疑等）每天都有，未列入此处，详见下方各营期卡片</div>
+    </div>`;
+}
+
+// ── 营期表单（添加 / 编辑）──────────────────────────────────────────────────
+function openForm(term){
+  const camp = term != null ? camps.find(c => c.term === term) : null;
+  const defTerm = camp ? camp.term : (camps.length ? Math.max(...camps.map(c => c.term))+1 : 1);
+  const skips = new Set(camp ? camp.skips || [] : []);
+  const chips = Array.from({length:12}, (_,i) => i+1).map(n =>
+    `<button type="button" class="skipchip${skips.has(n)?' on':''}" data-n="${n}"
+      onclick="this.classList.toggle('on')">${n}</button>`).join('');
+
+  document.getElementById('modal-root').innerHTML = `
+  <div class="overlay" onclick="if(event.target===this)closeForm()">
+    <div class="modal">
+      <div class="modal-title">${camp ? `编辑第 ${camp.term} 期` : '添加营期'}</div>
+      <div class="f-row">
+        <label class="f-label">期数</label>
+        <input class="f-input" id="f-term" type="number" min="1" value="${defTerm}">
+      </div>
+      <div class="f-row">
+        <label class="f-label">开营日期（开营典礼直播那天）</label>
+        <input class="f-input" id="f-date" type="date" value="${camp ? camp.openDate : ''}"
+          oninput="updateDayHint(this.value)">
+        <div class="f-hint" id="f-dayhint">${camp ? dayHintText(camp.openDate) : '开营直播一般在周日'}</div>
+      </div>
+      <div class="f-row">
+        <label class="f-label">长假跳过（可选）</label>
+        <div class="skipchips" id="f-skips">${chips}</div>
+        <div class="f-hint">遇到五一、十一、春节等长假时，点选碰上假期的课程周：该周变为休息周，课程整体顺延一周。正常情况不用选。</div>
+      </div>
+      <div class="modal-acts">
+        ${camp ? `<button class="btn danger" onclick="deleteCamp(${camp.term})">删除本期</button>` : ''}
+        <div class="spacer"></div>
+        <button class="btn ghost" onclick="closeForm()">取消</button>
+        <button class="btn primary" onclick="saveForm(${camp ? camp.term : 'null'})">保存</button>
+      </div>
+    </div>
+  </div>`;
+}
+function dayHintText(v){
+  if(!v) return '开营直播一般在周日';
+  const d = parseD(v);
+  return `周${WD[d.getDay()]}` + (d.getDay() !== 0 ? '（注意：开营直播一般在周日）' : '，没问题');
+}
+function updateDayHint(v){
+  const el = document.getElementById('f-dayhint');
+  el.textContent = dayHintText(v);
+  el.className = 'f-hint' + (v && parseD(v).getDay() !== 0 ? ' warn' : '');
+}
+function closeForm(){ document.getElementById('modal-root').innerHTML = ''; }
+
+function saveForm(origTerm){
+  const term = parseInt(document.getElementById('f-term').value);
+  const date = document.getElementById('f-date').value;
+  if(!(term >= 1)){ alert('请填写期数'); return; }
+  if(!date){ alert('请选择开营日期'); return; }
+  if(camps.some(c => c.term === term && c.term !== origTerm)){ alert(`第 ${term} 期已存在`); return; }
+  const skips = [...document.querySelectorAll('#f-skips .skipchip.on')].map(b => parseInt(b.dataset.n));
+  const entry = { term, openDate: date, skips };
+  if(origTerm != null){
+    camps = camps.map(c => c.term === origTerm ? entry : c);
+    if(origTerm !== term){ viewState[term] = viewState[origTerm]; delete viewState[origTerm]; }
+  } else {
+    camps.push(entry);
+  }
+  persist(); closeForm(); render();
+}
+function deleteCamp(term){
+  if(!confirm(`确定删除第 ${term} 期吗？`)) return;
+  camps = camps.filter(c => c.term !== term);
+  delete viewState[term];
+  persist(); closeForm(); render();
+}
+
+function copyLink(){
+  navigator.clipboard.writeText(location.href).then(() => {
+    const b = document.getElementById('copybtn');
+    if(b){ b.textContent = '已复制 ✓'; setTimeout(() => { b.textContent = '复制分享链接'; }, 1500); }
+  }).catch(() => prompt('复制下面的链接：', location.href));
+}
+
+// ── Main ─────────────────────────────────────────────────────────────────────
+function render(){
+  REG = [];
+  const today = new Date();
+  const sorted = [...camps].sort((a,b) => parseD(a.openDate) - parseD(b.openDate));
+  const campsData = sorted.map(camp => {
+    const weeks = campWeeks(camp);
+    return { camp, weeks, pos: campPos(weeks, today) };
+  });
+  const isActive = c => c.pos >= 0 && c.pos < c.weeks.length;
+  const order = c => isActive(c) ? 0 : (c.pos === -1 ? 1 : 2);
+  const cards = [...campsData].sort((a,b) => order(a) - order(b));
+
+  // 正在跑的营期一览
+  const running = campsData.filter(isActive);
+  const upcoming = campsData.filter(c => c.pos === -1);
+  const runchips = running.map(({camp, weeks, pos}) => {
+    const w = weeks[pos];
+    return `<div class="runchip"><b>第 ${camp.term} 期</b>${fmt(parseD(camp.openDate))}开营
+      <span class="rc-week ${w.type}">→ ${w.label}${w.sub ? '（'+w.sub+'）' : ''}</span></div>`;
+  }).concat(upcoming.map(({camp}) =>
+    `<div class="runchip"><b>第 ${camp.term} 期</b>${fmt(parseD(camp.openDate))}开营
+      <span class="rc-week idle">未开始</span></div>`
+  )).join('');
+
+  const body = camps.length ? `
+    <div class="runbar">${runchips}</div>
+    ${todaySection(campsData, today)}
+    <div class="sec-row"><div class="sec-title">营期总览（点击色块查看该周安排）</div></div>
+    ${timeline(campsData, today)}
+    <div class="sec-row"><div class="sec-title">各营期本周工作</div></div>
+    <div class="camps">${cards.map(c => campCard(c.camp, today)).join('')}</div>
+  ` : `
+    <div class="empty">还没有营期数据<br>点击下方按钮，输入开营日期即可生成整期排期
+      <br><button class="btn primary" onclick="openForm(null)">＋ 添加第一期</button>
+    </div>`;
+
+  document.getElementById('root').innerHTML = `
+    <div class="hdr">
+      <div>
+        <div class="hdr-title">Python 爬虫变现训练营 · 排期看板</div>
+        <div class="hdr-date">今天：${today.getFullYear()}年${today.getMonth()+1}月${today.getDate()}日&nbsp;周${WD[today.getDay()]}${running.length ? `&nbsp;·&nbsp;${running.length} 期进行中` : ''}</div>
+      </div>
+      <div class="sec-actions">
+        <button class="btn ghost" id="copybtn" onclick="copyLink()">复制分享链接</button>
+        <button class="btn primary" onclick="openForm(null)">＋ 添加营期</button>
+      </div>
+    </div>
+    <div class="legend">
+      <div class="leg-item"><div class="leg-dot" style="background:var(--open-bg)"></div>开营周</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--regular-bg)"></div>常规周</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--exam-bg)"></div>考试 / 测评</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--close-bg)"></div>结营周</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--rest-bg)"></div>休息周（长假）</div>
+    </div>
+    <div class="wrap">${body}</div>`;
+}
+render();
+</script>
+</body>
+</html>
