@@ -257,6 +257,7 @@ function timeMin(task){
   if(m) return +m[1]*60 + +m[2];
   if(task.time.includes('上午')) return 9*60;
   if(task.time.includes('下午')) return 14*60;
+  if(task.time.includes('直播前')) return 18*60;
   if(task.time.includes('晚')) return 19*60;
   if(task.time.includes('直播后')) return 21*60+30;
   return 9999;
