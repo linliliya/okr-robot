@@ -294,7 +294,9 @@ function weekTasks(w){
   if(w.type==='open') return SOP_OPEN;
   if(w.type==='rest') return SOP_REST;
   if(w.n===12) return SOP_CLOSING;
-  return SOP_REGULAR.concat(SOP_EXTRAS[w.n] || []);
+  // 第1周还没有"上周"，跳过标了 notW1 的回顾性任务（榜单、批改、督促）
+  const base = w.n===1 ? SOP_REGULAR.filter(t => !t.notW1) : SOP_REGULAR;
+  return base.concat(SOP_EXTRAS[w.n] || []);
 }
 
 // ── Render: task list of one week ────────────────────────────────────────────
