@@ -420,24 +420,30 @@ async function viewDetail(slug) {
           <summary>Claude 网页版 / App（claude.ai）</summary>
           <div class="g-body">
             不用解压。打开 claude.ai → 设置（Settings）→ 功能（Capabilities）→
-            找到 <b>Skills</b> → 上传这个 zip 文件即可。之后在对话里提到相关需求就会自动触发。<br>
-            如果没看到 Skills 入口，说明账号套餐暂不支持，可以改用下面「其他 AI 助手」的方法。
+            <b>Skills</b> → 上传这个 zip 文件即可（需要先把设置里的
+            「Code execution / 代码执行」开关打开，skill 依赖它运行）。<br>
+            上传后可在列表里开关这个 skill，对话中提到相关需求会自动触发。
+            skill 只对自己的账号生效，同事需要各自上传。
           </div>
         </details>
         <details>
-          <summary>Codex（OpenAI 的编程助手）</summary>
+          <summary>Codex（OpenAI 编程助手）</summary>
           <div class="g-body">
-            解压后打开里面的 <code>SKILL.md</code>，把全文复制，追加到项目的
-            <code>AGENTS.md</code> 文件里（没有就新建一个）；
-            或保存为 <code>~/.codex/prompts/技能名.md</code>，对话中输入
-            <code>/技能名</code> 调用。
+            Codex 原生支持 skill，格式和 Claude 通用，同一个 zip 直接用：<br>
+            解压后把<b>整个文件夹</b>放进 <code>~/.agents/skills/</code> 目录
+            （没有就新建一个）。对话里输入 <code>$技能名</code> 显式调用，
+            输入 <code>/skills</code> 可查看已安装的 skill，匹配需求时也会自动触发。<br>
+            提示：旧版 Codex 用的是 <code>~/.codex/skills/</code>，如果不生效，
+            先升级 Codex 到最新版，或把文件夹放到这个旧路径试试。
           </div>
         </details>
         <details>
           <summary>ChatGPT / 豆包 / 其他 AI 聊天助手</summary>
           <div class="g-body">
-            解压后打开里面的 <code>SKILL.md</code>（右键 → 打开方式 → 文本编辑/备忘录），
-            把全文复制，作为对话的<b>第一条消息</b>发给 AI，然后再说你的需求。<br>
+            新版 ChatGPT 桌面版已支持 skill（对话里输入 <code>@</code> 查看）。
+            其他聊天助手用通用方法：解压后打开里面的 <code>SKILL.md</code>
+            （右键 → 打开方式 → 文本编辑），把全文复制，作为对话的<b>第一条消息</b>发给
+            AI，然后再说你的需求。<br>
             注意：如果这个 skill 带了脚本文件（比如 scripts 文件夹），纯聊天助手无法运行脚本，
             只能用到里面的方法和模板部分。
           </div>
