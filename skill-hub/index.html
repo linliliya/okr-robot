@@ -180,6 +180,22 @@ function fmtDate(iso) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 }
 
+// 从 frontmatter 里取字段值；支持多行写法（description: > 或 | 后接缩进续行）
+function fmValue(fm, key) {
+  const lines = fm.split(/\r?\n/);
+  const idx = lines.findIndex(l => l.startsWith(key + ":"));
+  if (idx === -1) return "";
+  let first = lines[idx].slice(key.length + 1).trim();
+  if (/^[>|][+-]?$/.test(first)) first = "";
+  const cont = [];
+  for (let i = idx + 1; i < lines.length; i++) {
+    if (/^\s+\S/.test(lines[i])) cont.push(lines[i].trim());
+    else break;
+  }
+  const parts = (first ? [first] : []).concat(cont);
+  return parts.join(" ").replace(/^['"]|['"]$/g, "").trim();
+}
+
 function slugify(name) {
   return String(name).toLowerCase().trim()
     .replace(/[^a-z0-9一-鿿-]+/g, "-").replace(/^-+|-+$/g, "") || "skill";
@@ -477,8 +493,8 @@ function viewUpload() {
       const fm = parsedMd.match(/^---\s*\n([\s\S]*?)\n---/);
       let name = "", desc = "";
       if (fm) {
-        name = (fm[1].match(/^name:\s*(.+)$/m)?.[1] || "").trim().replace(/^['"]|['"]$/g, "");
-        desc = (fm[1].match(/^description:\s*(.+)$/m)?.[1] || "").trim().replace(/^['"]|['"]$/g, "");
+        name = fmValue(fm[1], "name");
+        desc = fmValue(fm[1], "description");
       }
       if (!name) name = path.split("/").length >= 2 ? path.split("/").slice(-2)[0] : picked.name.replace(".zip", "");
       if (name && !document.getElementById("f-title").value) document.getElementById("f-title").value = name;
