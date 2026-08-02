@@ -63,6 +63,9 @@ create policy "登录用户可发布" on public.skills
 -- 团队内协作：任何登录用户都可以更新 skill 信息（比如上传新版本时刷新描述）
 create policy "登录用户可更新" on public.skills
   for update to authenticated using (true);
+-- 最后一个版本被删除时，skill 本身也要能删掉（仅限 skill 作者）
+create policy "作者可删除自己的 skill" on public.skills
+  for delete to authenticated using (auth.uid() = author_id);
 
 -- ---------- 版本表 ----------
 create table public.versions (
@@ -83,6 +86,8 @@ create policy "登录用户可查看版本" on public.versions
   for select to authenticated using (true);
 create policy "登录用户可上传版本" on public.versions
   for insert to authenticated with check (auth.uid() = uploader_id);
+create policy "可删除自己上传的版本" on public.versions
+  for delete to authenticated using (auth.uid() = uploader_id);
 
 -- ---------- 下载计数（绕过行级权限，安全地 +1） ----------
 create or replace function public.increment_downloads(p_skill_id bigint)
@@ -101,3 +106,6 @@ create policy "登录用户可下载文件" on storage.objects
   for select to authenticated using (bucket_id = 'skills');
 create policy "登录用户可上传文件" on storage.objects
   for insert to authenticated with check (bucket_id = 'skills');
+create policy "可删除自己上传的文件" on storage.objects
+  for delete to authenticated
+  using (bucket_id = 'skills' and (owner = auth.uid() or owner_id = auth.uid()::text));

@@ -104,12 +104,18 @@
   .detail-head h1 { font-size: 24px; margin-bottom: 8px; }
   .detail-head .desc { color: var(--muted); line-height: 1.7; margin: 8px 0 14px; }
   .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
-  .install {
-    background: #0f172a; color: #e2e8f0; border-radius: 10px; padding: 13px 16px;
-    font-family: ui-monospace, Menlo, monospace; font-size: 13px; margin-top: 14px;
-    display: flex; justify-content: space-between; gap: 12px; align-items: center;
-    overflow-x: auto; white-space: nowrap;
+  .install-guides { margin-top: 16px; }
+  .install-guides .ig-title { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  .install-guides details {
+    border: 1px solid var(--line); border-radius: 10px; margin-top: 8px; background: var(--bg);
   }
+  .install-guides summary { padding: 10px 14px; cursor: pointer; font-size: 14px; font-weight: 600; }
+  .install-guides .g-body { padding: 2px 14px 12px; font-size: 13.5px; color: var(--muted); line-height: 1.9; }
+  .install-guides .g-body code {
+    background: #fff; border: 1px solid var(--line); padding: 1px 6px;
+    border-radius: 5px; font-size: 12.5px;
+  }
+  .btn.danger { background: #fee2e2; color: #dc2626; }
   .doc {
     background: #fff; border: 1px solid var(--line); border-radius: 16px;
     padding: 26px; margin-bottom: 18px; line-height: 1.8; font-size: 14.5px;
@@ -378,8 +384,8 @@ async function viewDetail(slug) {
     .select("*, uploader:profiles(display_name)")
     .eq("skill_id", skill.id).order("version", { ascending: false });
   const latest = versions?.[0];
-  const docHTML = latest?.skill_md
-    ? DOMPurify.sanitize(marked.parse(latest.skill_md)) : "";
+  const docBody = (latest?.skill_md || "").replace(/^---\s*\n[\s\S]*?\n---\s*\n?/, "");
+  const docHTML = docBody ? DOMPurify.sanitize(marked.parse(docBody)) : "";
   const tags = skill.tags ? skill.tags.split(/[,，\s]+/).filter(Boolean) : [];
 
   $app.innerHTML = `
@@ -398,8 +404,44 @@ async function viewDetail(slug) {
         ${latest ? `<button class="btn" id="dl-btn">⬇️ 下载最新版 v${latest.version}</button>` : ""}
         <a class="btn ghost" href="#/upload">上传新版本</a>
       </div>
-      <div class="install">
-        <span>📦 安装方法：下载后解压，把整个文件夹放进 <b>~/.claude/skills/</b> 目录即可</span>
+      <div class="install-guides">
+        <div class="ig-title">📦 下载后怎么用？按你用的工具选一个：</div>
+        <details open>
+          <summary>Claude Code（终端 / 桌面版）</summary>
+          <div class="g-body">
+            解压 zip，把<b>整个文件夹</b>放进 <code>~/.claude/skills/</code> 目录
+            （访达按 <code>Cmd+Shift+G</code> 输入这个路径即可打开；Windows 在
+            <code>C:\用户\你的用户名\.claude\skills\</code>）。<br>
+            放好后新开一个对话，说出 skill 描述里的触发词就会自动生效，
+            也可以直接说「用 xx skill 帮我…」。
+          </div>
+        </details>
+        <details>
+          <summary>Claude 网页版 / App（claude.ai）</summary>
+          <div class="g-body">
+            不用解压。打开 claude.ai → 设置（Settings）→ 功能（Capabilities）→
+            找到 <b>Skills</b> → 上传这个 zip 文件即可。之后在对话里提到相关需求就会自动触发。<br>
+            如果没看到 Skills 入口，说明账号套餐暂不支持，可以改用下面「其他 AI 助手」的方法。
+          </div>
+        </details>
+        <details>
+          <summary>Codex（OpenAI 的编程助手）</summary>
+          <div class="g-body">
+            解压后打开里面的 <code>SKILL.md</code>，把全文复制，追加到项目的
+            <code>AGENTS.md</code> 文件里（没有就新建一个）；
+            或保存为 <code>~/.codex/prompts/技能名.md</code>，对话中输入
+            <code>/技能名</code> 调用。
+          </div>
+        </details>
+        <details>
+          <summary>ChatGPT / 豆包 / 其他 AI 聊天助手</summary>
+          <div class="g-body">
+            解压后打开里面的 <code>SKILL.md</code>（右键 → 打开方式 → 文本编辑/备忘录），
+            把全文复制，作为对话的<b>第一条消息</b>发给 AI，然后再说你的需求。<br>
+            注意：如果这个 skill 带了脚本文件（比如 scripts 文件夹），纯聊天助手无法运行脚本，
+            只能用到里面的方法和模板部分。
+          </div>
+        </details>
       </div>
     </div>
     ${docHTML ? `<div class="doc">${docHTML}</div>` : ""}
@@ -410,6 +452,9 @@ async function viewDetail(slug) {
           <span class="vlog">${esc(v.changelog) || "（没写更新说明）"}</span>
           <span class="vmeta">${esc(v.uploader?.display_name || "?")} · ${fmtDate(v.uploaded_at)}</span>
           <button class="btn small ghost" data-ver="${v.version}" data-path="${esc(v.file_path)}">下载</button>
+          ${me && me.id === v.uploader_id
+            ? `<button class="btn small danger" data-del="${v.id}" data-delver="${v.version}" data-delpath="${esc(v.file_path)}">删除</button>`
+            : ""}
         </div>`).join("")}
     </div>`;
 
@@ -427,6 +472,26 @@ async function viewDetail(slug) {
   if (dlBtn) dlBtn.onclick = () => download(latest.file_path, latest.version);
   $app.querySelectorAll("[data-ver]").forEach(b =>
     b.onclick = () => download(b.dataset.path, b.dataset.ver));
+
+  $app.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => {
+    const isLast = versions.length === 1;
+    if (!confirm(`确定删除 v${b.dataset.delver} 吗？删除后无法恢复。${isLast ? "\n这是唯一的版本，删除后整个 skill 会一并移除。" : ""}`)) return;
+    const { data: deleted, error } = await sb.from("versions")
+      .delete().eq("id", b.dataset.del).select("id");
+    if (error || !deleted?.length) {
+      flash("删除失败：" + (error?.message || "没有删除权限（管理员需在 Supabase 运行 update-delete-permission.sql）"), 6000);
+      return;
+    }
+    await sb.storage.from("skills").remove([b.dataset.delpath]);
+    if (isLast) {
+      await sb.from("skills").delete().eq("id", skill.id);
+      flash("已删除，这是最后一个版本，skill 已一并移除");
+      location.hash = "#/";
+    } else {
+      flash("版本已删除");
+      viewDetail(slug);
+    }
+  });
 }
 
 // ---------- 视图：上传 ----------
