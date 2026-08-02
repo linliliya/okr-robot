@@ -463,10 +463,13 @@ function viewUpload() {
     result.innerHTML = `<div class="parse-ok">已选择：${esc(picked.name)}（${(picked.size/1024/1024).toFixed(1)}MB）</div>`;
     try {
       const zip = await JSZip.loadAsync(picked);
-      const cands = Object.keys(zip.files)
-        .filter(n => n.endsWith("SKILL.md") && !n.includes("__MACOSX"));
+      const names = Object.keys(zip.files)
+        .filter(n => !n.includes("__MACOSX") && !zip.files[n].dir);
+      const cands = names.filter(n => n.toLowerCase().endsWith("skill.md"));
       if (!cands.length) {
-        result.innerHTML += `<div class="hint">⚠️ 压缩包里没找到 SKILL.md，请在下方手动填写名称和描述</div>`;
+        const shown = names.slice(0, 6).map(esc).join("、");
+        result.innerHTML += `<div class="hint">⚠️ 压缩包里没找到 SKILL.md，仍可上传，请在下方手动填写名称和描述。<br>
+          包内文件：${shown || "（空）"}${names.length > 6 ? ` 等 ${names.length} 个` : ""}</div>`;
         parsedMd = ""; return;
       }
       const path = cands.sort((a, b) => a.split("/").length - b.split("/").length)[0];
