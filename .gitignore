@@ -14,3 +14,7 @@
 !camp-schedule/**
 !ai-camp-schedule/
 !ai-camp-schedule/**
+
+# Skill 共享平台
+!skill-hub/
+!skill-hub/**

@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skill 市集 · 团队技能共享平台</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.5/dist/purify.min.js"></script>
+<script src="config.js"></script>
+<style>
+  :root {
+    --bg: #f6f7fb; --card: #ffffff; --ink: #1c2333; --muted: #6b7280;
+    --brand: #4f46e5; --brand-soft: #eef0ff; --line: #e5e7eb;
+    --ok: #059669; --warn: #d97706;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg); color: var(--ink); min-height: 100vh;
+  }
+  a { color: var(--brand); text-decoration: none; }
+  header {
+    background: #fff; border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; z-index: 10;
+  }
+  .header-inner {
+    max-width: 1080px; margin: 0 auto; padding: 14px 20px;
+    display: flex; align-items: center; gap: 16px;
+  }
+  .logo { font-size: 20px; font-weight: 700; color: var(--ink); }
+  .logo span { color: var(--brand); }
+  .header-inner .spacer { flex: 1; }
+  .btn {
+    display: inline-block; padding: 8px 18px; border-radius: 8px; border: none;
+    background: var(--brand); color: #fff; font-size: 14px; cursor: pointer;
+  }
+  .btn:hover { opacity: .9; }
+  .btn.ghost { background: var(--brand-soft); color: var(--brand); }
+  .btn.small { padding: 5px 12px; font-size: 13px; }
+  .userchip { font-size: 14px; color: var(--muted); }
+  main { max-width: 1080px; margin: 0 auto; padding: 24px 20px 60px; }
+  #flash {
+    position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
+    background: var(--ink); color: #fff; padding: 10px 22px; border-radius: 10px;
+    font-size: 14px; z-index: 99; display: none; max-width: 90%;
+  }
+  /* 列表 */
+  .toolbar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; align-items: center; }
+  .toolbar input[type=search] {
+    flex: 1; min-width: 220px; padding: 10px 14px; border: 1px solid var(--line);
+    border-radius: 10px; font-size: 14px; background: #fff;
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+  .chip {
+    padding: 5px 14px; border-radius: 999px; background: #fff; font-size: 13px;
+    border: 1px solid var(--line); cursor: pointer; color: var(--muted);
+  }
+  .chip.active { background: var(--brand); color: #fff; border-color: var(--brand); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 18px; cursor: pointer; transition: box-shadow .15s, transform .15s;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .card:hover { box-shadow: 0 6px 20px rgba(30,40,90,.08); transform: translateY(-2px); }
+  .card h3 { font-size: 16px; }
+  .card .desc {
+    font-size: 13px; color: var(--muted); line-height: 1.6; flex: 1;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px; font-size: 12px; color: var(--muted); align-items: center; }
+  .tag { background: var(--brand-soft); color: var(--brand); padding: 2px 9px; border-radius: 6px; font-size: 12px; }
+  .empty { text-align: center; color: var(--muted); padding: 70px 0; font-size: 15px; line-height: 2; }
+  /* 表单 */
+  .panel {
+    background: #fff; border: 1px solid var(--line); border-radius: 16px;
+    padding: 28px; max-width: 560px; margin: 0 auto;
+  }
+  .panel.wide { max-width: 720px; }
+  .panel h2 { margin-bottom: 18px; font-size: 20px; }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  .field input, .field select, .field textarea {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--line);
+    border-radius: 9px; font-size: 14px; font-family: inherit; background: #fff;
+  }
+  .field textarea { min-height: 72px; resize: vertical; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 5px; line-height: 1.6; }
+  .authswitch { text-align: center; margin-top: 16px; font-size: 14px; color: var(--muted); }
+  .dropzone {
+    border: 2px dashed var(--line); border-radius: 12px; padding: 30px;
+    text-align: center; color: var(--muted); cursor: pointer; font-size: 14px;
+    background: var(--bg); transition: border-color .15s;
+  }
+  .dropzone:hover, .dropzone.drag { border-color: var(--brand); color: var(--brand); }
+  .parse-ok { color: var(--ok); font-size: 13px; margin-top: 8px; }
+  /* 详情 */
+  .detail-head {
+    background: #fff; border: 1px solid var(--line); border-radius: 16px;
+    padding: 26px; margin-bottom: 18px;
+  }
+  .detail-head h1 { font-size: 24px; margin-bottom: 8px; }
+  .detail-head .desc { color: var(--muted); line-height: 1.7; margin: 8px 0 14px; }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+  .install {
+    background: #0f172a; color: #e2e8f0; border-radius: 10px; padding: 13px 16px;
+    font-family: ui-monospace, Menlo, monospace; font-size: 13px; margin-top: 14px;
+    display: flex; justify-content: space-between; gap: 12px; align-items: center;
+    overflow-x: auto; white-space: nowrap;
+  }
+  .doc {
+    background: #fff; border: 1px solid var(--line); border-radius: 16px;
+    padding: 26px; margin-bottom: 18px; line-height: 1.8; font-size: 14.5px;
+    overflow-x: auto;
+  }
+  .doc h1, .doc h2, .doc h3 { margin: 18px 0 8px; }
+  .doc p, .doc ul, .doc ol { margin: 8px 0; }
+  .doc ul, .doc ol { padding-left: 22px; }
+  .doc code { background: var(--bg); padding: 1px 6px; border-radius: 5px; font-size: 13px; }
+  .doc pre { background: #0f172a; color: #e2e8f0; padding: 14px; border-radius: 10px; overflow-x: auto; margin: 10px 0; }
+  .doc pre code { background: none; color: inherit; }
+  .doc table { border-collapse: collapse; }
+  .doc td, .doc th { border: 1px solid var(--line); padding: 6px 12px; }
+  .vlist { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 10px 26px; }
+  .vitem { display: flex; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--line); align-items: baseline; flex-wrap: wrap; }
+  .vitem:last-child { border-bottom: none; }
+  .vnum { font-weight: 700; color: var(--brand); min-width: 40px; }
+  .vlog { flex: 1; font-size: 14px; min-width: 200px; }
+  .vmeta { font-size: 12px; color: var(--muted); }
+  .backlink { display: inline-block; margin-bottom: 14px; font-size: 14px; }
+  .setup-note {
+    max-width: 620px; margin: 60px auto; background: #fff7ed; border: 1px solid #fdba74;
+    border-radius: 14px; padding: 26px; line-height: 1.9; font-size: 14.5px;
+  }
+  .setup-note h2 { margin-bottom: 8px; color: var(--warn); }
+  .setup-note code { background: #fff; padding: 1px 6px; border-radius: 5px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <a class="logo" href="#/">Skill <span>市集</span></a>
+    <div class="spacer"></div>
+    <span id="nav-user" class="userchip"></span>
+    <a id="nav-upload" class="btn small" href="#/upload" style="display:none">+ 上传 Skill</a>
+    <button id="nav-logout" class="btn small ghost" style="display:none">退出</button>
+  </div>
+</header>
+<div id="flash"></div>
+<main id="app"></main>
+
+<script>
+const CFG = window.SKILLHUB_CONFIG || {};
+const CONFIGURED = CFG.SUPABASE_URL && !CFG.SUPABASE_URL.includes("YOUR-PROJECT");
+const sb = CONFIGURED ? supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY) : null;
+
+const CATEGORIES = ["文案生成", "数据处理", "课程制作", "招聘筛选", "资讯采集", "效率工具", "其他"];
+const DEPARTMENTS = ["内容", "运营", "交付", "产品", "其他"];
+
+const $app = document.getElementById("app");
+let me = null;          // 当前登录用户 { id, email, profile }
+let listState = { q: "", category: "", sort: "new" };
+let skillCache = [];
+
+// ---------- 小工具 ----------
+const esc = s => String(s ?? "").replace(/[&<>"']/g,
+  c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+function flash(msg, ms = 2600) {
+  const el = document.getElementById("flash");
+  el.textContent = msg; el.style.display = "block";
+  clearTimeout(el._t); el._t = setTimeout(() => el.style.display = "none", ms);
+}
+
+function fmtDate(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+
+function slugify(name) {
+  return String(name).toLowerCase().trim()
+    .replace(/[^a-z0-9一-鿿-]+/g, "-").replace(/^-+|-+$/g, "") || "skill";
+}
+
+// ---------- 认证 ----------
+async function refreshUser() {
+  if (!sb) return;
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { me = null; renderNav(); return; }
+  const { data: profile } = await sb.from("profiles")
+    .select("*").eq("id", session.user.id).maybeSingle();
+  me = { id: session.user.id, email: session.user.email, profile };
+  renderNav();
+}
+
+function renderNav() {
+  document.getElementById("nav-user").textContent =
+    me ? `${me.profile?.display_name || me.email} · ${me.profile?.department || ""}` : "";
+  document.getElementById("nav-upload").style.display = me ? "" : "none";
+  document.getElementById("nav-logout").style.display = me ? "" : "none";
+}
+
+document.getElementById("nav-logout").onclick = async () => {
+  await sb.auth.signOut(); me = null; renderNav(); location.hash = "#/login";
+};
+
+// ---------- 路由 ----------
+async function route() {
+  if (!CONFIGURED) return viewSetupNote();
+  await refreshUser();
+  const hash = location.hash || "#/";
+  if (!me && hash !== "#/register") return viewAuth(hash === "#/login" ? "login" : "login");
+  if (hash === "#/register") return viewAuth("register");
+  if (hash === "#/login") return viewAuth("login");
+  if (hash === "#/upload") return viewUpload();
+  const m = hash.match(/^#\/skill\/(.+)$/);
+  if (m) return viewDetail(decodeURIComponent(m[1]));
+  return viewList();
+}
+window.addEventListener("hashchange", route);
+
+// ---------- 视图：未配置提示 ----------
+function viewSetupNote() {
+  $app.innerHTML = `
+    <div class="setup-note">
+      <h2>⚙️ 平台还没连接数据库</h2>
+      <p>这个页面已经部署好了，但还差最后一步：按照仓库里 <code>skill-hub/SETUP.md</code>
+      的指引注册一个免费的 Supabase 项目（约 5 分钟），然后把项目地址和密钥填进
+      <code>skill-hub/config.js</code>，重新发布即可。</p>
+    </div>`;
+}
+
+// ---------- 视图：登录 / 注册 ----------
+function viewAuth(mode) {
+  const isLogin = mode === "login";
+  $app.innerHTML = `
+    <div class="panel">
+      <h2>${isLogin ? "登录" : "注册账号"}</h2>
+      <form id="auth-form">
+        ${isLogin ? "" : `
+        <div class="field"><label>姓名（同事们看到的名字）</label>
+          <input name="display_name" required maxlength="20" placeholder="例如：林可欣"></div>
+        <div class="field"><label>部门</label>
+          <select name="department">${DEPARTMENTS.map(d => `<option>${d}</option>`).join("")}</select></div>`}
+        <div class="field"><label>邮箱</label>
+          <input name="email" type="email" required placeholder="you@example.com"></div>
+        <div class="field"><label>密码${isLogin ? "" : "（至少 6 位）"}</label>
+          <input name="password" type="password" required minlength="6"></div>
+        <button class="btn" style="width:100%">${isLogin ? "登录" : "注册并进入"}</button>
+      </form>
+      <div class="authswitch">
+        ${isLogin
+          ? `第一次来？<a href="#/register">注册一个账号</a>`
+          : `已有账号？<a href="#/login">直接登录</a>`}
+      </div>
+    </div>`;
+  document.getElementById("auth-form").onsubmit = async e => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const email = fd.get("email"), password = fd.get("password");
+    try {
+      if (isLogin) {
+        const { error } = await sb.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+      } else {
+        const { error } = await sb.auth.signUp({
+          email, password,
+          options: { data: {
+            display_name: fd.get("display_name"),
+            department: fd.get("department"),
+          } },
+        });
+        if (error) throw error;
+      }
+      location.hash = "#/"; route();
+    } catch (err) {
+      const msg = String(err.message || err);
+      if (msg.includes("Invalid login")) flash("邮箱或密码不对");
+      else if (msg.includes("already registered")) flash("这个邮箱已经注册过了，直接登录吧");
+      else if (msg.includes("confirm")) flash("提示管理员：需在 Supabase 后台关闭邮箱验证（见 SETUP.md 第 4 步）", 5000);
+      else flash("出错了：" + msg, 4000);
+    }
+  };
+}
+
+// ---------- 视图：列表 ----------
+async function viewList() {
+  $app.innerHTML = `<div class="empty">加载中…</div>`;
+  const { data, error } = await sb.from("skills")
+    .select("*, author:profiles(display_name, department)")
+    .order("updated_at", { ascending: false });
+  if (error) { $app.innerHTML = `<div class="empty">加载失败：${esc(error.message)}</div>`; return; }
+  skillCache = data || [];
+  renderList();
+}
+
+function renderList() {
+  const { q, category, sort } = listState;
+  let items = skillCache.filter(s => {
+    const hitQ = !q || (s.title + s.description + s.tags).toLowerCase().includes(q.toLowerCase());
+    const hitC = !category || s.category === category;
+    return hitQ && hitC;
+  });
+  if (sort === "hot") items = [...items].sort((a, b) => b.downloads - a.downloads);
+
+  $app.innerHTML = `
+    <div class="toolbar">
+      <input type="search" id="search" placeholder="搜索 skill 名称、描述、标签…" value="${esc(q)}">
+      <button class="chip ${sort === "new" ? "active" : ""}" data-sort="new">🕐 最新</button>
+      <button class="chip ${sort === "hot" ? "active" : ""}" data-sort="hot">🔥 最热</button>
+    </div>
+    <div class="chips">
+      <button class="chip ${!category ? "active" : ""}" data-cat="">全部</button>
+      ${CATEGORIES.map(c =>
+        `<button class="chip ${category === c ? "active" : ""}" data-cat="${c}">${c}</button>`).join("")}
+    </div>
+    ${items.length ? `<div class="grid">${items.map(cardHTML).join("")}</div>`
+      : `<div class="empty">还没有匹配的 skill<br>点右上角「+ 上传 Skill」发布第一个吧 🚀</div>`}`;
+
+  document.getElementById("search").oninput = e => {
+    listState.q = e.target.value; renderList();
+    document.getElementById("search").focus();
+    const inp = document.getElementById("search");
+    inp.setSelectionRange(inp.value.length, inp.value.length);
+  };
+  $app.querySelectorAll("[data-sort]").forEach(b =>
+    b.onclick = () => { listState.sort = b.dataset.sort; renderList(); });
+  $app.querySelectorAll("[data-cat]").forEach(b =>
+    b.onclick = () => { listState.category = b.dataset.cat; renderList(); });
+  $app.querySelectorAll(".card").forEach(c =>
+    c.onclick = () => location.hash = "#/skill/" + encodeURIComponent(c.dataset.slug));
+}
+
+function cardHTML(s) {
+  const tags = s.tags ? s.tags.split(/[,，\s]+/).filter(Boolean) : [];
+  return `
+    <div class="card" data-slug="${esc(s.slug)}">
+      <h3>${esc(s.title)}</h3>
+      <div class="desc">${esc(s.description) || "（暂无描述）"}</div>
+      <div class="meta">
+        <span class="tag">${esc(s.category)}</span>
+        ${tags.slice(0, 3).map(t => `<span class="tag">${esc(t)}</span>`).join("")}
+      </div>
+      <div class="meta">
+        <span>👤 ${esc(s.author?.display_name || "?")} · ${esc(s.author?.department || "")}</span>
+        <span>⬇️ ${s.downloads}</span>
+        <span>${fmtDate(s.updated_at)}</span>
+      </div>
+    </div>`;
+}
+
+// ---------- 视图：详情 ----------
+async function viewDetail(slug) {
+  $app.innerHTML = `<div class="empty">加载中…</div>`;
+  const { data: skill } = await sb.from("skills")
+    .select("*, author:profiles(display_name, department)").eq("slug", slug).maybeSingle();
+  if (!skill) { $app.innerHTML = `<div class="empty">没找到这个 skill</div>`; return; }
+  const { data: versions } = await sb.from("versions")
+    .select("*, uploader:profiles(display_name)")
+    .eq("skill_id", skill.id).order("version", { ascending: false });
+  const latest = versions?.[0];
+  const docHTML = latest?.skill_md
+    ? DOMPurify.sanitize(marked.parse(latest.skill_md)) : "";
+  const tags = skill.tags ? skill.tags.split(/[,，\s]+/).filter(Boolean) : [];
+
+  $app.innerHTML = `
+    <a class="backlink" href="#/">← 返回列表</a>
+    <div class="detail-head">
+      <h1>${esc(skill.title)}</h1>
+      <div class="meta">
+        <span class="tag">${esc(skill.category)}</span>
+        ${tags.map(t => `<span class="tag">${esc(t)}</span>`).join("")}
+        <span>👤 ${esc(skill.author?.display_name || "?")} · ${esc(skill.author?.department || "")}</span>
+        <span>⬇️ 已下载 ${skill.downloads} 次</span>
+        <span>更新于 ${fmtDate(skill.updated_at)}</span>
+      </div>
+      <div class="desc">${esc(skill.description)}</div>
+      <div class="actions">
+        ${latest ? `<button class="btn" id="dl-btn">⬇️ 下载最新版 v${latest.version}</button>` : ""}
+        <a class="btn ghost" href="#/upload">上传新版本</a>
+      </div>
+      <div class="install">
+        <span>📦 安装方法：下载后解压，把整个文件夹放进 <b>~/.claude/skills/</b> 目录即可</span>
+      </div>
+    </div>
+    ${docHTML ? `<div class="doc">${docHTML}</div>` : ""}
+    <div class="vlist">
+      ${(versions || []).map(v => `
+        <div class="vitem">
+          <span class="vnum">v${v.version}</span>
+          <span class="vlog">${esc(v.changelog) || "（没写更新说明）"}</span>
+          <span class="vmeta">${esc(v.uploader?.display_name || "?")} · ${fmtDate(v.uploaded_at)}</span>
+          <button class="btn small ghost" data-ver="${v.version}" data-path="${esc(v.file_path)}">下载</button>
+        </div>`).join("")}
+    </div>`;
+
+  async function download(path, version) {
+    flash("正在下载…");
+    const { data, error } = await sb.storage.from("skills").download(path);
+    if (error) { flash("下载失败：" + error.message, 4000); return; }
+    const url = URL.createObjectURL(data);
+    const a = document.createElement("a");
+    a.href = url; a.download = `${skill.slug}-v${version}.zip`; a.click();
+    URL.revokeObjectURL(url);
+    await sb.rpc("increment_downloads", { p_skill_id: skill.id });
+  }
+  const dlBtn = document.getElementById("dl-btn");
+  if (dlBtn) dlBtn.onclick = () => download(latest.file_path, latest.version);
+  $app.querySelectorAll("[data-ver]").forEach(b =>
+    b.onclick = () => download(b.dataset.path, b.dataset.ver));
+}
+
+// ---------- 视图：上传 ----------
+function viewUpload() {
+  $app.innerHTML = `
+    <div class="panel wide">
+      <h2>上传 Skill</h2>
+      <form id="up-form">
+        <div class="field">
+          <div class="dropzone" id="dz">
+            📦 点击选择（或拖入）skill 的 <b>.zip 压缩包</b><br>
+            <span class="hint">在电脑上找到 skill 文件夹，右键 →「压缩」就能得到 zip</span>
+            <div id="parse-result"></div>
+          </div>
+          <input type="file" id="file" accept=".zip" hidden>
+        </div>
+        <div class="field"><label>Skill 名称</label>
+          <input name="title" id="f-title" required placeholder="上传 zip 后自动识别，也可手动修改"></div>
+        <div class="field"><label>一句话描述（这个 skill 是干嘛的、什么时候用）</label>
+          <textarea name="description" id="f-desc" placeholder="上传 zip 后自动识别 SKILL.md 里的描述"></textarea></div>
+        <div class="field"><label>分类</label>
+          <select name="category">${CATEGORIES.map(c => `<option>${c}</option>`).join("")}</select></div>
+        <div class="field"><label>标签（用逗号分隔，方便同事搜索）</label>
+          <input name="tags" placeholder="例如：朋友圈, 文案, 小红书"></div>
+        <div class="field"><label>更新说明（这一版改了什么；首次上传可不填）</label>
+          <input name="changelog" placeholder="例如：优化了触发词，修复了日期格式问题"></div>
+        <button class="btn" style="width:100%" id="up-btn">发布</button>
+        <div class="hint" style="margin-top:10px">同名 skill 再次上传会自动记为新版本，旧版本仍可下载。单个文件最大 50MB。</div>
+      </form>
+    </div>`;
+
+  const fileInput = document.getElementById("file");
+  const dz = document.getElementById("dz");
+  let picked = null, parsedMd = "";
+
+  dz.onclick = () => fileInput.click();
+  dz.ondragover = e => { e.preventDefault(); dz.classList.add("drag"); };
+  dz.ondragleave = () => dz.classList.remove("drag");
+  dz.ondrop = e => {
+    e.preventDefault(); dz.classList.remove("drag");
+    if (e.dataTransfer.files[0]) { fileInput.files = e.dataTransfer.files; handleFile(); }
+  };
+  fileInput.onchange = handleFile;
+
+  async function handleFile() {
+    picked = fileInput.files[0];
+    if (!picked) return;
+    if (!picked.name.endsWith(".zip")) { flash("请选择 .zip 压缩包"); picked = null; return; }
+    const result = document.getElementById("parse-result");
+    result.innerHTML = `<div class="parse-ok">已选择：${esc(picked.name)}（${(picked.size/1024/1024).toFixed(1)}MB）</div>`;
+    try {
+      const zip = await JSZip.loadAsync(picked);
+      const cands = Object.keys(zip.files)
+        .filter(n => n.endsWith("SKILL.md") && !n.includes("__MACOSX"));
+      if (!cands.length) {
+        result.innerHTML += `<div class="hint">⚠️ 压缩包里没找到 SKILL.md，请在下方手动填写名称和描述</div>`;
+        parsedMd = ""; return;
+      }
+      const path = cands.sort((a, b) => a.split("/").length - b.split("/").length)[0];
+      parsedMd = await zip.files[path].async("string");
+      const fm = parsedMd.match(/^---\s*\n([\s\S]*?)\n---/);
+      let name = "", desc = "";
+      if (fm) {
+        name = (fm[1].match(/^name:\s*(.+)$/m)?.[1] || "").trim().replace(/^['"]|['"]$/g, "");
+        desc = (fm[1].match(/^description:\s*(.+)$/m)?.[1] || "").trim().replace(/^['"]|['"]$/g, "");
+      }
+      if (!name) name = path.split("/").length >= 2 ? path.split("/").slice(-2)[0] : picked.name.replace(".zip", "");
+      if (name && !document.getElementById("f-title").value) document.getElementById("f-title").value = name;
+      if (desc && !document.getElementById("f-desc").value) document.getElementById("f-desc").value = desc;
+      result.innerHTML += `<div class="parse-ok">✅ 已自动识别 SKILL.md${name ? `：${esc(name)}` : ""}</div>`;
+    } catch (err) {
+      result.innerHTML += `<div class="hint">⚠️ 解析压缩包失败，请确认是有效的 zip 文件</div>`;
+    }
+  }
+
+  document.getElementById("up-form").onsubmit = async e => {
+    e.preventDefault();
+    if (!picked) { flash("请先选择 zip 压缩包"); return; }
+    const btn = document.getElementById("up-btn");
+    btn.disabled = true; btn.textContent = "发布中…";
+    try {
+      const fd = new FormData(e.target);
+      const title = fd.get("title").trim();
+      const slug = slugify(title);
+
+      const { data: existing } = await sb.from("skills")
+        .select("id, author_id").eq("slug", slug).maybeSingle();
+
+      let skillId, version = 1;
+      if (existing) {
+        skillId = existing.id;
+        const { data: lastVer } = await sb.from("versions")
+          .select("version").eq("skill_id", skillId)
+          .order("version", { ascending: false }).limit(1).maybeSingle();
+        version = (lastVer?.version || 0) + 1;
+      }
+
+      const filePath = `${slug}/v${version}-${Date.now()}.zip`;
+      const { error: upErr } = await sb.storage.from("skills").upload(filePath, picked);
+      if (upErr) throw upErr;
+
+      const meta = {
+        title, description: fd.get("description").trim(),
+        category: fd.get("category"), tags: fd.get("tags").trim(),
+        updated_at: new Date().toISOString(),
+      };
+      if (existing) {
+        const { error } = await sb.from("skills").update(meta).eq("id", skillId);
+        if (error) throw error;
+      } else {
+        const { data, error } = await sb.from("skills")
+          .insert({ ...meta, slug, author_id: me.id }).select("id").single();
+        if (error) throw error;
+        skillId = data.id;
+      }
+      const { error: verErr } = await sb.from("versions").insert({
+        skill_id: skillId, version, changelog: fd.get("changelog").trim(),
+        file_path: filePath, skill_md: parsedMd, uploader_id: me.id,
+      });
+      if (verErr) throw verErr;
+
+      flash(`发布成功！当前为 v${version} 🎉`);
+      location.hash = "#/skill/" + encodeURIComponent(slug);
+    } catch (err) {
+      flash("发布失败：" + (err.message || err), 5000);
+      btn.disabled = false; btn.textContent = "发布";
+    }
+  };
+}
+
+// ---------- 启动 ----------
+route();
+</script>
+</body>
+</html>
