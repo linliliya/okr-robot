@@ -241,8 +241,8 @@ function viewAuth(mode) {
       <h2>${isLogin ? "登录" : "注册账号"}</h2>
       <form id="auth-form">
         ${isLogin ? "" : `
-        <div class="field"><label>姓名（同事们看到的名字）</label>
-          <input name="display_name" required maxlength="20" placeholder="例如：林可欣"></div>
+        <div class="field"><label>姓名（同事们看到的名字，填大家熟悉的称呼就行）</label>
+          <input name="display_name" required maxlength="20" placeholder="例如：小王 / Lily"></div>
         <div class="field"><label>部门</label>
           <select name="department">${DEPARTMENTS.map(d => `<option>${d}</option>`).join("")}</select></div>`}
         <div class="field"><label>邮箱</label>
