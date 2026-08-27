@@ -1,0 +1,25 @@
+name: Skill 平台保活（防止 Supabase 免费版休眠）
+
+on:
+  schedule:
+    # 每天 08:00 北京时间（UTC 00:00）访问一次数据库，保持项目活跃
+    # Supabase 免费版连续 7 天无 API 活动会自动休眠
+    - cron: "0 0 * * *"
+  workflow_dispatch: # 允许手动触发测试
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 访问 Supabase 保持活跃
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" \
+            "https://hxlsquvryfiixvjpuxfr.supabase.co/rest/v1/skills?select=id&limit=1" \
+            -H "apikey: sb_publishable_eTMK5odEP3pubKfD76qx1w_hBq61jj7" \
+            --max-time 30)
+          echo "Supabase 响应: HTTP $code"
+          # 200/401/403 都说明项目在运行；000 或 5xx 说明可能已休眠
+          if [ "$code" = "000" ]; then
+            echo "::warning::Supabase 项目无法访问，可能已休眠，请到 supabase.com 后台恢复"
+            exit 1
+          fi

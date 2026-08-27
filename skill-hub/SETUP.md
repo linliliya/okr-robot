@@ -70,5 +70,9 @@ git add skill-hub && git commit -m 'feat: skill 共享平台' && git push
 ## 日常维护
 
 - 免费额度：数据库 500MB + 文件存储 1GB，团队内部用绰绰有余
+- **休眠机制**：免费版连续 7 天无访问会自动休眠（页面会登录失败/连不上）。
+  仓库里的 GitHub Action（`.github/workflows/skillhub-keepalive.yml`）每天会
+  自动访问一次防止休眠；万一还是休眠了，到 supabase.com 后台打开项目，
+  点 **Restore project** 恢复即可，数据不会丢
 - 想看谁注册了、删除违规内容：Supabase 后台 → Table Editor 直接改表
 - 文件都存在 Storage → skills 桶里，可以直接在后台浏览
