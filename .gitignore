@@ -18,3 +18,8 @@
 # Skill 共享平台
 !skill-hub/
 !skill-hub/**
+
+# 训练营周复盘（tests/ 里放的是真实业务样例和开发规格，不提交）
+!camp-review/
+!camp-review/**
+camp-review/tests/
