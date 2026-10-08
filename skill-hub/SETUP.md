@@ -1,7 +1,7 @@
 # Skill 市集 · 上线步骤（约 5-10 分钟）
 
 页面代码已经写好，push 到 GitHub 就会自动部署到
-`https://okr-internal.aurange.cn/skill-hub/`。
+`https://internal.aurange.cn/skill-hub/`。
 但平台需要一个免费的云端数据库来存账号和 skill 文件，按下面步骤配置一次即可。
 
 ## 第 1 步：注册 Supabase（免费）
@@ -50,11 +50,11 @@ Supabase 2025 年改版后密钥页面搬了位置，按新版界面操作：
 git add skill-hub && git commit -m 'feat: skill 共享平台' && git push
 ```
 
-几分钟后访问 `https://okr-internal.aurange.cn/skill-hub/` 即可。
+几分钟后访问 `https://internal.aurange.cn/skill-hub/` 即可。
 
 ## 给同事的使用说明（可直接转发）
 
-> 📍 平台地址：https://okr-internal.aurange.cn/skill-hub/
+> 📍 平台地址：https://internal.aurange.cn/skill-hub/
 >
 > **第一次用**：点「注册一个账号」，填姓名、部门、邮箱、密码即可。
 >

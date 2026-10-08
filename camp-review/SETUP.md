@@ -1,7 +1,7 @@
 # 训练营周复盘 · 上线步骤（约 5 分钟）
 
 页面代码 push 到 GitHub 后会自动部署到
-`https://okr-internal.aurange.cn/camp-review/`。
+`https://internal.aurange.cn/camp-review/`。
 
 数据库直接复用 Skill 市集的 Supabase 项目：`config.js` 里已经填好和
 `skill-hub/config.js` 相同的项目地址和 Publishable key，账号也和 Skill 市集共用
@@ -43,10 +43,10 @@ Skill 市集是开放注册的，所以复盘数据多加了一层「成员白�
 git add camp-review && git commit -m 'feat: 训练营周复盘系统' && git push
 ```
 
-几分钟后访问 `https://okr-internal.aurange.cn/camp-review/`，用 Skill 市集的账号登录即可。
+几分钟后访问 `https://internal.aurange.cn/camp-review/`，用 Skill 市集的账号登录即可。
 
 - `camp-review/tests/` 已被 `.gitignore` 排除（里面是真实样例数据和开发规格），不会提交
-- 想先试用：打开 `https://okr-internal.aurange.cn/camp-review/?demo=1` 进入演示模式，
+- 想先试用：打开 `https://internal.aurange.cn/camp-review/?demo=1` 进入演示模式，
   数据只存在当前浏览器，不会写进数据库
 
 ## 保活
@@ -98,7 +98,7 @@ limit 1;
 
 ## 给运营同学的使用说明（可直接转发）
 
-> 📍 地址：https://okr-internal.aurange.cn/camp-review/
+> 📍 地址：https://internal.aurange.cn/camp-review/
 >
 > **第一次用**
 > 和 Skill 市集共用账号，注册过的直接登录；没有账号就在登录页点「注册」。

@@ -229,8 +229,8 @@ def send_message(token: str, receive_id_type: str, receive_id: str,
     if receive_id_type == "chat_id":
         lines.append([
             {"tag": "text", "text": "更多 OKR 安排可查看："},
-            {"tag": "a", "text": "http://okr-internal.aurange.cn/okr-schedule.html",
-             "href": "http://okr-internal.aurange.cn/okr-schedule.html"},
+            {"tag": "a", "text": "https://internal.aurange.cn/okr-schedule.html",
+             "href": "https://internal.aurange.cn/okr-schedule.html"},
         ])
 
     content_obj = {
