@@ -44,6 +44,20 @@ Supabase 2025 年改版后密钥页面搬了位置，按新版界面操作：
 1. 左侧菜单 **Authentication** → **Sign In / Providers** → **Email**
 2. 把 **Confirm email** 开关关掉 → Save
 
+## 发布前：检查认证域名配置
+
+在 Supabase 的 **Authentication** → **URL Configuration** 中维护以下配置，
+这些地址已在后台保存并验证：
+
+- **Site URL**：`https://internal.aurange.cn/skill-hub/`
+- **Redirect URLs**：逐条填写以下三个精确地址，保留末尾的 `/`：
+  - `https://internal.aurange.cn/skill-hub/`
+  - `https://internal.aurange.cn/camp-review/`
+  - `https://internal.aurange.cn/sales-script/`
+
+三个应用共用同一个 Supabase Auth。以后更换域名时，需要同步更新这里的
+Site URL 和 Redirect URLs，确保认证后的返回地址仍指向正确的应用。
+
 ## 第 5 步：发布
 
 ```bash
