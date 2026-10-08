@@ -9,6 +9,9 @@
 !.github/**
 !CNAME
 
+# 内部工具首页
+!index.html
+
 # 训练营排期看板
 !camp-schedule/
 !camp-schedule/**
