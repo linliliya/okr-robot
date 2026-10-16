@@ -44,7 +44,11 @@
     .section-heading h2 { margin: 0; font-size: 14px; font-weight: 650; }
     .section-heading span { color: var(--muted); font-size: 12px; }
     .section-heading::after { content: ""; height: 1px; background: var(--line); flex: 1; margin-left: 4px; }
+    .directory-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); gap: 28px; align-items: start; }
+    .general-tools { min-width: 0; }
     .tool-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+    .team-tools { min-width: 0; padding-left: 28px; border-left: 1px solid var(--line); }
+    .team-grid { display: grid; gap: 18px; }
     .tool { min-width: 0; position: relative; display: flex; flex-direction: column; padding: 27px; border: 1px solid var(--line); border-radius: 16px; background: var(--paper); transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
     .tool:hover { transform: translateY(-3px); box-shadow: 0 10px 24px #2633220a; border-color: #b8c3b9; }
     .tool-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 20px; }
@@ -52,17 +56,36 @@
     .tool-icon svg { width: 23px; height: 23px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
     .tool-kind { font-size: 11px; color: var(--muted); letter-spacing: .03em; }
     .tool h3 { margin: 0 0 9px; font-size: 20px; line-height: 1.4; font-weight: 650; letter-spacing: -.025em; }
-    .tool p { margin: 0; min-height: 3.7em; color: var(--muted); font-size: 13px; line-height: 1.85; }
+    .tool p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.85; }
     .tool-bottom { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: auto; padding-top: 27px; color: var(--green); font-size: 12px; font-weight: 600; }
     .arrow { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; transition: transform .18s ease; }
     .tool:hover .arrow { transform: translateX(3px); }
+    .schedule-grid .tool { padding: 24px; }
+    .schedule-grid .tool h3 { font-size: 17px; }
+    .schedule-grid .tool-top { margin-bottom: 17px; }
+    .schedule-grid .tool-bottom { padding-top: 23px; }
+    .schedule-grid .tool-icon { width: 39px; height: 39px; border-radius: 10px; }
+    .schedule-grid .tool-icon svg { width: 21px; height: 21px; }
     .blue { color: #4c6586; background: #eff3f9; }
     .violet { color: #756087; background: #f5f0f9; }
     footer { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 38px; padding: 22px 0 30px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; }
     .footer-brand { font-size: 10px; letter-spacing: .14em; }
+    @media (max-width: 960px) {
+      .directory-grid { grid-template-columns: 1fr; gap: 0; }
+      .team-tools { padding: 26px 0 0; border-left: 0; border-top: 1px solid var(--line); }
+      .team-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
     @media (max-width: 800px) {
       .wrap { padding: 0 24px; }
       .brand-en { display: none; }
+      .schedule-grid { grid-template-columns: 1fr; }
+      .schedule-grid .tool { display: grid; grid-template-columns: 44px 1fr 20px; column-gap: 18px; padding: 22px; align-items: center; }
+      .schedule-grid .tool-top { grid-column: 1; grid-row: 1 / 3; margin: 0; }
+      .schedule-grid .tool-kind { display: none; }
+      .schedule-grid h3 { grid-column: 2; margin-bottom: 4px; }
+      .schedule-grid p { grid-column: 2; }
+      .schedule-grid .tool-bottom { grid-column: 3; grid-row: 1 / 3; padding: 0; margin: 0; }
+      .schedule-grid .tool-bottom span { display: none; }
       .directory-note { display: none; }
     }
     @media (max-width: 560px) {
@@ -73,7 +96,7 @@
       .header-label { font-size: 11px; }
       .intro { padding: 36px 0 30px; }
       .intro-copy { font-size: 13px; max-width: 280px; }
-      .tool-grid { grid-template-columns: 1fr; gap: 14px; }
+      .tool-grid, .team-grid { grid-template-columns: 1fr; gap: 14px; }
       .tool { padding: 23px; }
       .tool-top { margin-bottom: 16px; }
       .tool h3 { font-size: 19px; }
@@ -81,6 +104,10 @@
       .section { margin-bottom: 26px; }
       .section-heading { gap: 10px; }
       .section-heading span { font-size: 11px; }
+      .schedule-grid { gap: 12px; }
+      .schedule-grid .tool { padding: 20px 16px; column-gap: 12px; }
+      .schedule-grid .tool h3 { font-size: 16px; }
+      .schedule-grid .tool p { font-size: 12px; }
       footer { margin-top: 30px; padding-bottom: 24px; gap: 8px; }
     }
     @media (prefers-reduced-motion: reduce) {
@@ -112,59 +139,61 @@
     </div>
 
     <!-- 通用工具优先展示；专用系统按各自的成员名单控制数据访问。 -->
-    <section class="section" aria-labelledby="common-title">
-      <div class="section-heading"><h2 id="common-title">全员常用</h2><span>共享技能与团队排期</span></div>
-      <div class="tool-grid">
-        <a class="tool" href="./skill-hub/index.html" aria-labelledby="skills-name" aria-describedby="skills-desc">
-          <div class="tool-top"><span class="tool-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M17.5 3v7M14 6.5h7"/></svg></span><span class="tool-kind">全员使用</span></div>
-          <h3 id="skills-name">Skill 市集</h3>
-          <p id="skills-desc">发现、上传和分享团队的 AI 技能，把好用的方法变成可复用的工具。</p>
-          <div class="tool-bottom"><span>浏览团队技能</span><svg class="arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></div>
-        </a>
-        <a class="tool" href="./okr-schedule.html" aria-labelledby="okr-name" aria-describedby="okr-desc">
-          <div class="tool-top"><span class="tool-icon blue"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg></span><span class="tool-kind">目标管理</span></div>
-          <h3 id="okr-name">OKR 月度排期</h3>
-          <p id="okr-desc">查看目标制定、过程跟进和月度复盘的时间安排。</p>
-          <div class="tool-bottom"><span>查看月度安排</span><svg class="arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></div>
-        </a>
+    <div class="directory-grid">
+      <div class="general-tools">
+        <section class="section" aria-labelledby="common-title">
+          <div class="section-heading"><h2 id="common-title">全员常用</h2><span>共享技能与团队排期</span></div>
+          <div class="tool-grid">
+            <a class="tool" href="./skill-hub/index.html" aria-labelledby="skills-name" aria-describedby="skills-desc">
+              <div class="tool-top"><span class="tool-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M17.5 3v7M14 6.5h7"/></svg></span><span class="tool-kind">全员使用</span></div>
+              <h3 id="skills-name">Skill 市集</h3>
+              <p id="skills-desc">发现、上传和分享团队的 AI 技能，把好用的方法变成可复用的工具。</p>
+              <div class="tool-bottom"><span>浏览团队技能</span><svg class="arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></div>
+            </a>
+            <a class="tool" href="./okr-schedule.html" aria-labelledby="okr-name" aria-describedby="okr-desc">
+              <div class="tool-top"><span class="tool-icon blue"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg></span><span class="tool-kind">目标管理</span></div>
+              <h3 id="okr-name">OKR 月度排期</h3>
+              <p id="okr-desc">查看目标制定、过程跟进和月度复盘的时间安排。</p>
+              <div class="tool-bottom"><span>查看月度安排</span><svg class="arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></div>
+            </a>
+          </div>
+        </section>
+        <section class="section" aria-labelledby="schedule-title">
+          <div class="section-heading"><h2 id="schedule-title">训练营排期</h2><span>查看营期与执行安排</span></div>
+          <div class="tool-grid schedule-grid">
+            <a class="tool" href="./camp-schedule/index.html" aria-labelledby="camp-name" aria-describedby="camp-desc">
+              <div class="tool-top"><span class="tool-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4m10-4v4M3 10h18m-14 5 3 3 6-5"/></svg></span><span class="tool-kind">教学运营</span></div>
+              <h3 id="camp-name">爬虫训练营排期</h3>
+              <p id="camp-desc">查看各营期进度、班主任本周任务和今日待办。</p>
+              <div class="tool-bottom"><span>查看营期与待办</span><svg class="arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></div>
+            </a>
+            <a class="tool" href="./ai-camp-schedule/index.html" aria-labelledby="ai-name" aria-describedby="ai-desc">
+              <div class="tool-top"><span class="tool-icon violet"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="3" width="20" height="15" rx="2"/><path d="m9 7-3 3 3 3m6-6 3 3-3 3M8 22h8m-4-4v4"/></svg></span><span class="tool-kind">教学运营</span></div>
+              <h3 id="ai-name">AI 编程训练营排期</h3>
+              <p id="ai-desc">查看 AI 编程训练营各期进度与每周执行任务。</p>
+              <div class="tool-bottom"><span>查看营期与待办</span><svg class="arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></div>
+            </a>
+          </div>
+        </section>
       </div>
-    </section>
-
-    <section class="section" aria-labelledby="schedule-title">
-      <div class="section-heading"><h2 id="schedule-title">训练营排期</h2><span>查看营期与执行安排</span></div>
-      <div class="tool-grid">
-        <a class="tool" href="./camp-schedule/index.html" aria-labelledby="camp-name" aria-describedby="camp-desc">
-          <div class="tool-top"><span class="tool-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4m10-4v4M3 10h18m-14 5 3 3 6-5"/></svg></span><span class="tool-kind">教学运营</span></div>
-          <h3 id="camp-name">爬虫训练营排期</h3>
-          <p id="camp-desc">查看各营期进度、班主任本周任务和今日待办。</p>
-          <div class="tool-bottom"><span>查看营期与待办</span><svg class="arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></div>
-        </a>
-        <a class="tool" href="./ai-camp-schedule/index.html" aria-labelledby="ai-name" aria-describedby="ai-desc">
-          <div class="tool-top"><span class="tool-icon violet"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="3" width="20" height="15" rx="2"/><path d="m9 7-3 3 3 3m6-6 3 3-3 3M8 22h8m-4-4v4"/></svg></span><span class="tool-kind">教学运营</span></div>
-          <h3 id="ai-name">AI 编程训练营排期</h3>
-          <p id="ai-desc">查看 AI 编程训练营各期进度与每周执行任务。</p>
-          <div class="tool-bottom"><span>查看营期与待办</span><svg class="arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></div>
-        </a>
-      </div>
-    </section>
-
-    <section class="section" aria-labelledby="team-title">
-      <div class="section-heading"><h2 id="team-title">课程运营与销售</h2><span>按成员授权</span></div>
-      <div class="tool-grid">
-        <a class="tool" href="./camp-review/index.html" aria-labelledby="review-name" aria-describedby="review-desc">
-          <div class="tool-top"><span class="tool-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4v16h16M8 15v-4m5 4V7m5 8v-5"/><path d="m15 4 3-2 3 2"/></svg></span><span class="tool-kind">课程运营</span></div>
-          <h3 id="review-name">运营分析系统</h3>
-          <p id="review-desc">记录每期训练营复盘，自动汇总月度成交与趋势，查看经验沉淀和行动效果。</p>
-          <div class="tool-bottom"><span>进入运营分析系统</span><svg class="arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></div>
-        </a>
-        <a class="tool" href="./sales-script/" aria-labelledby="sales-name" aria-describedby="sales-desc">
-          <div class="tool-top"><span class="tool-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H8l-5 3V11.5A7.5 7.5 0 0 1 10.5 4h2a7.5 7.5 0 0 1 7.5 7.5Z"/><path d="M7 9h9M7 13h6"/></svg></span><span class="tool-kind">销售支持</span></div>
-          <h3 id="sales-name">话术复盘</h3>
-          <p id="sales-desc">整理销售话术与训练营资料，参考已有话术回复客户，记录案例并开展每周复盘。</p>
-          <div class="tool-bottom"><span>进入话术复盘</span><svg class="arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></div>
-        </a>
-      </div>
-    </section>
+      <section class="section team-tools" aria-labelledby="team-title">
+        <div class="section-heading"><h2 id="team-title">课程运营与销售</h2><span>按成员授权</span></div>
+        <div class="team-grid">
+            <a class="tool" href="./camp-review/index.html" aria-labelledby="review-name" aria-describedby="review-desc">
+              <div class="tool-top"><span class="tool-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4v16h16M8 15v-4m5 4V7m5 8v-5"/><path d="m15 4 3-2 3 2"/></svg></span><span class="tool-kind">课程运营</span></div>
+              <h3 id="review-name">运营分析系统</h3>
+              <p id="review-desc">记录每期训练营复盘，自动汇总月度成交与趋势，查看经验沉淀和行动效果。</p>
+              <div class="tool-bottom"><span>进入运营分析系统</span><svg class="arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></div>
+            </a>
+            <a class="tool" href="./sales-script/" aria-labelledby="sales-name" aria-describedby="sales-desc">
+              <div class="tool-top"><span class="tool-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H8l-5 3V11.5A7.5 7.5 0 0 1 10.5 4h2a7.5 7.5 0 0 1 7.5 7.5Z"/><path d="M7 9h9M7 13h6"/></svg></span><span class="tool-kind">销售支持</span></div>
+              <h3 id="sales-name">话术复盘</h3>
+              <p id="sales-desc">整理销售话术与训练营资料，参考已有话术回复客户，记录案例并开展每周复盘。</p>
+              <div class="tool-bottom"><span>进入话术复盘</span><svg class="arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></div>
+            </a>
+        </div>
+      </section>
+    </div>
     <footer><span>果粒科技 · 团队内部工具</span><span class="footer-brand">A LITTLE BETTER, EVERY DAY.</span></footer>
   </main>
 </body>
