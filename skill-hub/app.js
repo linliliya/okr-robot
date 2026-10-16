@@ -335,7 +335,7 @@ function renderList() {
       ${sources.map(([key, label]) => `<button class="source-tab ${source === key ? "active" : ""}" data-source="${key}" aria-pressed="${source === key}">${label}<span>${key === "all" ? skillCache.length : skillCache.filter(s => H.sourceType(s) === key).length}</span></button>`).join("")}
     </div>
     <div class="toolbar">
-      <input type="search" id="search" aria-label="搜索 Skill" placeholder="搜索功能、Skill 名称或同事的推荐理由" value="${esc(q)}">
+      <input type="search" id="search" aria-label="搜索 Skill" placeholder="搜索功能、Skill 名称或简介" value="${esc(q)}">
       <button class="chip ${sort === "new" ? "active" : ""}" data-sort="new" aria-pressed="${sort === "new"}">最近更新</button>
       ${source === "upload" ? `<button class="chip ${sort === "hot" ? "active" : ""}" data-sort="hot" aria-pressed="${sort === "hot"}">下载最多</button>` : ""}
     </div>
@@ -375,7 +375,6 @@ function cardHTML(s) {
     <div class="card-heading"><h3>${esc(H.getDisplayTitle(s))}</h3><div class="skill-original-name">${esc(s.title)}</div></div>
     <div class="desc">${esc(s.description) || "查看介绍和使用方法"}</div>
     <div class="card-roles">${roleTagsHTML(s.roles)}</div>
-    ${external && s.recommendation ? `<div class="card-reason"><span>${esc(s.recommendation)}</span></div>` : ""}
     <div class="meta"><span class="tag">${esc(s.category)}</span>${tags.slice(0, 2).map(t => `<span>${esc(t)}</span>`).join("")}</div>
     <div class="card-bottom"><div class="meta"><span>${esc(s.author?.display_name || "同事")} ${external ? "推荐" : "分享"}</span><span>${fmtDate(s.updated_at)}</span></div><span class="card-action">${external ? "了解与安装" : "查看详情"} →</span></div>
   </a>`;
@@ -386,7 +385,7 @@ function viewShare() {
     <div class="share-intro"><h1>分享一个好用的 Skill</h1><p>可以上传你整理的文件，也可以把网上发现的好资源推荐给同事。</p></div>
     <div class="share-options">
       <a class="share-option" href="#/upload"><span class="option-symbol" aria-hidden="true">↑</span><h2>上传 Skill 文件</h2><p>上传完整 ZIP 压缩包，自动读取名称和介绍，再用功能标题告诉同事它能做什么。</p><span class="btn ghost">选择文件 →</span></a>
-      <a class="share-option" href="#/recommend"><span class="option-symbol" aria-hidden="true">↗</span><h2>分享网上的 Skill</h2><p>粘贴链接自动读取介绍，再写一句推荐理由。同事可以把安装请求发给 AI 工具。</p><span class="btn ghost">粘贴链接 →</span></a>
+      <a class="share-option" href="#/recommend"><span class="option-symbol" aria-hidden="true">↗</span><h2>分享网上的 Skill</h2><p>粘贴链接自动读取介绍，确认标题和简介后即可分享。同事可以把安装请求发给 AI 工具。</p><span class="btn ghost">粘贴链接 →</span></a>
     </div>`;
 }
 
@@ -746,7 +745,7 @@ async function viewRecommend(slug = "") {
   $app.innerHTML = `<div class="panel wide recommend-panel">
     <a class="backlink" href="${editing ? "#/skill/" + encodeURIComponent(editing.slug) : "#/share"}">← ${editing ? "返回详情" : "选择分享方式"}</a>
     <h2>${editing ? "编辑推荐" : "推荐网上的 Skill"}</h2>
-    <p class="form-intro">${editing ? "可以更新功能标题、介绍和使用心得，让同事更容易上手。" : "粘贴链接读取基本信息，确认功能标题，再写一句你为什么推荐。"}</p>
+    <p class="form-intro">${editing ? "可以更新功能标题、简介和使用信息，让同事更容易上手。" : "粘贴链接自动读取信息，确认功能标题和简介后即可分享。"}</p>
     <form id="recommend-form">
       <div class="field"><label for="r-url">Skill 链接 *</label>
         <div class="import-input"><input id="r-url" name="source_url" type="url" required maxlength="2048" value="${value("source_url")}" ${editing ? "readonly" : ""} placeholder="粘贴 GitHub 或 skills.sh 链接">
@@ -771,7 +770,6 @@ async function viewRecommend(slug = "") {
           <div class="field"><label for="r-path">仓库内的 Skill 目录</label><input id="r-path" name="source_path" maxlength="1024" value="${value("source_path")}" ${editing ? "readonly" : ""} placeholder="自动识别，或手动填写，例如 skills/pdf"><p class="hint">仅 GitHub 需要。手动推荐仓库首页时要填具体目录；根目录填一个英文句点。</p></div>
         </div>
       </details>
-      <div class="field recommendation-field"><label for="r-recommendation">为什么推荐给同事 *</label><textarea id="r-recommendation" name="recommendation" required maxlength="4000" placeholder="比如：整理客户访谈时很省事，能直接提取需求和待办。">${value("recommendation")}</textarea></div>
       ${roleFieldsHTML(editing?.roles)}
       <details id="extra-fields" class="form-details" ${editing?.tested || editing?.install_notes ? "open" : ""}>
         <summary>补充使用经验 <span>选填</span></summary>
@@ -875,7 +873,7 @@ async function viewRecommend(slug = "") {
       }
       if (!customDisplayTitle && !fields.display_title.value) fields.display_title.value = H.suggestDisplayTitle(imported);
       choices = []; pickerField.hidden = true; metadataFields.open = !fields.title.value || !fields.description.value;
-      status.textContent = result.notice || "已读取，确认下面的信息，再写一句推荐理由就能分享。";
+      status.textContent = result.notice || "已读取，确认功能标题和简介后即可分享。";
       renderSummary();
     } catch (error) {
       if (token !== request || !active()) return;
@@ -909,7 +907,7 @@ async function viewRecommend(slug = "") {
       const metadata = {
         title: get("title"), description: get("description"), category: get("category"), tags: get("tags"),
         roles: H.normalizeRoles(fd.getAll("roles")),
-        original_author: get("original_author"), recommendation: get("recommendation"),
+        original_author: get("original_author"),
         tested: get("tested") === "true", tested_with: get("tested") === "true" ? get("tested_with") : "",
         tested_version: get("tested") === "true" ? get("tested_version") : "", install_notes: get("install_notes"), updated_at: new Date().toISOString(),
       };
@@ -919,7 +917,6 @@ async function viewRecommend(slug = "") {
       }
       try { metadata.display_title = validateDisplayTitle(get("display_title")); }
       catch (error) { fields.display_title.focus(); throw error; }
-      if (!metadata.recommendation) { el("r-recommendation").focus(); throw new Error("写一句为什么推荐给同事吧。"); }
       if (metadata.tested && !metadata.tested_with) { extraFields.open = true; el("r-tool").focus(); throw new Error("请补充试用工具，方便同事参考。"); }
       let saved;
       if (editing) {
@@ -980,8 +977,6 @@ function viewExternalDetail(skill) {
     </div>
     <div class="detail-layout">
       <div class="detail-main">
-        <section class="detail-panel"><h2>为什么推荐给同事</h2><p class="prose recommendation">${esc(skill.recommendation)}</p>
-          <p class="install-note">${esc(skill.author?.display_name || "分享者")} 的推荐理由</p></section>
         <section class="detail-panel" id="installation"><h2>安装与使用</h2>
           ${installPrompt ? `<div class="install-step"><span class="step-number">1</span><div><h3>把安装请求发给 AI</h3><p>复制下面这段话，发到你常用的 AI 工具里，让它帮你安装。</p></div></div>
           <div class="install-prompt" id="install-prompt">${esc(installPrompt)}</div>

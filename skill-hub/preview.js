@@ -41,7 +41,6 @@
         source_repo: "vercel-labs/agent-skills", source_path: "skills/web-design-guidelines",
         original_author: "Vercel",
         roles: ["设计师", "产品经理"],
-        recommendation: "示例推荐理由。做活动页、报名页时，可以先看看这份网页检查指南。这个示例尚未记录实际试用结果。",
         install_notes: "先阅读原项目的说明，确认它适合你使用的工具。这里仅用于预览推荐和安装指引。",
       },
       {
@@ -52,7 +51,6 @@
         source_key: "github:anthropics/skills:skills/pdf", source_repo: "anthropics/skills",
         source_path: "skills/pdf", original_author: "Anthropic",
         roles: ["通用"],
-        recommendation: "示例推荐理由。经常整理 PDF 资料的同事可以从这个项目开始了解。尚未试用，欢迎实际使用后补充适合的场景。",
         install_notes: "安装前查看原项目列出的运行环境和依赖，按自己的工具完成配置。",
       },
       {
@@ -223,7 +221,7 @@
           rows = values.map(value => {
             const now = timestamp();
             const defaults = this.table === "skills"
-              ? { source_type: "upload", downloads: 0, created_at: now, updated_at: now, tested: false, roles: [], display_title: "" }
+              ? { source_type: "upload", downloads: 0, created_at: now, updated_at: now, tested: false, roles: [], display_title: "", recommendation: "" }
               : this.table === "versions" ? { uploaded_at: now } : { created_at: now };
             return { ...defaults, id: next.nextId++, ...value };
           });

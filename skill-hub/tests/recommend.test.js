@@ -131,7 +131,7 @@ async function harness(options = {}) {
             calls.push({ table, operation, payload, comparisons });
             let rows = db[table].filter(row => filters.every(match => match(row)));
             if (operation === "insert") {
-              rows = [{ id: nextId++, ...payload }];
+              rows = [{ id: nextId++, recommendation: "", ...payload }];
               db[table].push(...rows);
             } else if (operation === "update") rows.forEach(row => Object.assign(row, payload));
             return { data: single ? rows.at(-1) || null : rows, error: null };
@@ -207,7 +207,7 @@ function imported(name = "pdf", extra = {}) {
   };
 }
 
-test("a source imports metadata and can publish after adding one recommendation sentence", async () => {
+test("an imported Skill can publish with its function title and introduction without a recommendation reason", async () => {
   const result = imported();
   const app = await harness({ inspect: async () => result });
   app.input("r-url", result.skill.source.url);
@@ -217,24 +217,30 @@ test("a source imports metadata and can publish after adding one recommendation 
   assert.equal(app.element("r-author").value, result.skill.original_author);
   assert.equal(app.element("r-category").value, result.skill.category);
   assert.equal(app.element("r-tags").value, result.skill.tags);
-  app.input("r-recommendation", "Useful for preparing course handouts.");
+  assert.doesNotMatch(app.element("app").innerHTML, /id="r-recommendation"|name="recommendation"|为什么推荐给同事/);
   await app.submit();
   assert.equal(app.db.skills.length, 1);
   assert.equal(app.db.skills[0].title, result.skill.title);
   assert.equal(app.db.skills[0].display_title, result.skill.display_title);
   assert.equal(app.db.skills[0].source_key, result.skill.source.key);
-  assert.equal(app.db.skills[0].recommendation, "Useful for preparing course handouts.");
+  assert.equal(app.db.skills[0].recommendation, "");
+  assert.equal(Object.hasOwn(app.calls.find(call => call.operation === "insert").payload, "recommendation"), false);
 });
 
-test("imported metadata cannot publish without the colleague's recommendation", async () => {
-  const result = imported();
+test("imported metadata still needs an introduction before publishing", async () => {
+  const result = imported("pdf", { description: "" });
   const app = await harness({ inspect: async () => result });
   app.input("r-url", result.skill.source.url);
   await app.read();
   await app.submit();
   assert.equal(app.db.skills.length, 0);
-  assert.match(app.element("recommend-error").textContent, /推荐/);
+  assert.match(app.element("recommend-error").textContent, /介绍/);
   assert.equal(app.element("recommend-submit").disabled, false);
+  app.input("r-display-title", "整理 PDF 课程讲义");
+  app.input("r-description", "Prepare course handouts from PDF files.");
+  await app.submit();
+  assert.equal(app.db.skills.length, 1);
+  assert.equal(app.db.skills[0].description, "Prepare course handouts from PDF files.");
 });
 
 test("a source read failure exposes manual entry and permits a complete recommendation", async () => {
@@ -246,7 +252,6 @@ test("a source read failure exposes manual entry and permits a complete recommen
   app.input("r-title", "Manually entered skill");
   app.input("r-display-title", "整理课程资料");
   app.input("r-description", "A manually described use case");
-  app.input("r-recommendation", "Useful to our team.");
   await app.submit();
   assert.equal(app.db.skills.length, 1);
   assert.equal(app.db.skills[0].title, "Manually entered skill");
@@ -268,7 +273,6 @@ test("changing the source aborts its old read and ignores a late response", asyn
   slow.resolve(stale);
   await first;
   assert.equal(app.element("r-title").value, current.skill.title);
-  app.input("r-recommendation", "Useful to our team.");
   await app.submit();
   assert.equal(app.db.skills.length, 1);
   assert.equal(app.db.skills[0].source_key, current.skill.source.key);
@@ -279,7 +283,6 @@ test("submitting during metadata import cannot publish an incomplete recommendat
   const result = imported();
   const app = await harness({ inspect: () => waiting.promise });
   app.input("r-url", result.skill.source.url);
-  app.input("r-recommendation", "Useful to our team.");
   const pending = app.read();
   await app.submit();
   assert.equal(app.db.skills.length, 0);
@@ -289,15 +292,16 @@ test("submitting during metadata import cannot publish an incomplete recommendat
   assert.equal(app.db.skills.length, 1);
 });
 
-test("importing source metadata preserves a recommendation the colleague wrote", async () => {
+test("an imported introduction can be edited before publishing without adding a separate reason", async () => {
   const result = imported();
   const app = await harness({ inspect: async () => result });
   app.input("r-url", result.skill.source.url);
-  app.input("r-recommendation", "I used this to prepare our course handouts.");
   await app.read();
-  assert.equal(app.element("r-recommendation").value, "I used this to prepare our course handouts.");
+  app.input("r-display-title", "整理 PDF 课程讲义");
+  app.input("r-description", "Prepare printable course handouts from PDF files.");
   await app.submit();
-  assert.equal(app.db.skills[0].recommendation, "I used this to prepare our course handouts.");
+  assert.equal(app.db.skills[0].description, "Prepare printable course handouts from PDF files.");
+  assert.equal(app.db.skills[0].recommendation, "");
 });
 
 for (const duplicateKey of ["skills:example/skills:pdf", "github:example/skills:skills/pdf"]) {
@@ -309,7 +313,6 @@ for (const duplicateKey of ["skills:example/skills:pdf", "github:example/skills:
       existing: [{ id: 7, slug: "existing-pdf", source_type: "external", source_key: duplicateKey }],
     });
     app.input("r-url", skillsUrl);
-    app.input("r-recommendation", "Useful to our team.");
     await app.read();
     await app.submit();
     assert.equal(app.db.skills.length, 1);
@@ -351,7 +354,6 @@ test("a repository choice must be selected and read before publishing", async ()
     readChoice: async choice => { assert.equal(choice.path, "skills/slides"); return result; },
   });
   app.input("r-url", "https://github.com/example/skills");
-  app.input("r-recommendation", "Useful for preparing course slides.");
   await app.read();
   assert.equal(app.element("skill-choice-field").hidden, false);
   await app.submit();
@@ -365,18 +367,17 @@ test("a repository choice must be selected and read before publishing", async ()
   assert.equal(app.db.skills[0].source_key, result.skill.source.key);
 });
 
-test("replacing an imported link clears its old fields while retaining the recommendation", async () => {
+test("replacing an imported link clears stale metadata before it can be published", async () => {
   const result = imported();
   const app = await harness({ inspect: async () => result });
   app.input("r-url", result.skill.source.url);
-  app.input("r-recommendation", "Useful to our team.");
   await app.read();
   app.input("r-url", "https://example.org/another-skill");
   assert.equal(app.element("r-title").value, "");
   assert.equal(app.element("r-description").value, "");
   assert.equal(app.element("r-path").value, "");
   assert.equal(app.element("imported-preview").hidden, true);
-  assert.equal(app.element("r-recommendation").value, "Useful to our team.");
+  assert.equal(app.element("r-display-title").value, "");
   await app.submit();
   assert.equal(app.db.skills.length, 0);
 });
@@ -398,7 +399,6 @@ test("editing an existing recommendation never imports or changes its saved sour
   assert.equal(app.element("import-button").onclick, undefined);
   app.input("r-title", "Revised title");
   app.input("r-description", "Revised description");
-  app.input("r-recommendation", "Revised recommendation based on actual use.");
   // Even a script changing readonly DOM fields cannot rewrite source identity.
   app.input("r-url", "https://github.com/another/skills/tree/main/other");
   app.input("r-path", "other");
@@ -406,11 +406,13 @@ test("editing an existing recommendation never imports or changes its saved sour
   assert.equal(app.importerCalls.length, 0);
   assert.equal(app.db.skills.length, 1);
   assert.equal(app.db.skills[0].title, "Revised title");
+  assert.equal(app.db.skills[0].recommendation, existing.recommendation);
   for (const key of ["source_url", "source_key", "source_repo", "source_path"]) {
     assert.equal(app.db.skills[0][key], existing[key]);
   }
   const update = app.calls.find(call => call.operation === "update");
   assert.ok(update);
+  assert.equal(Object.hasOwn(update.payload, "recommendation"), false);
   assert.equal(Object.keys(update.payload).some(key => key.startsWith("source_")), false);
   assert.equal(app.location.hash, "#/skill/existing-pdf");
 });
@@ -429,7 +431,6 @@ test("a late import after navigation cannot update the replacement recommendatio
   app.input("r-title", "A different skill");
   app.input("r-display-title", "整理课程资料");
   app.input("r-description", "Current page description");
-  app.input("r-recommendation", "Current page recommendation");
   waiting.resolve(result);
   await pending;
   assert.equal(oldTitle.value, "", "the disconnected form is not updated either");
@@ -449,14 +450,13 @@ test("selected job roles survive automatic import and are saved with the recomme
   const roles = H.ROLE_OPTIONS.filter(role => role !== "通用").slice(0, 2);
   roles.forEach(role => app.chooseRole(role));
   app.input("r-url", result.skill.source.url);
-  app.input("r-recommendation", "Useful for our daily work.");
   await app.read();
   assert.deepEqual(app.selectedRoles(), roles);
   await app.submit();
   assert.deepEqual(app.db.skills[0].roles, roles);
 });
 
-test("editing recommendation text retains its previously selected roles", async () => {
+test("editing an introduction retains previously selected roles and any saved legacy reason", async () => {
   const result = imported();
   const roles = H.ROLE_OPTIONS.filter(role => role !== "通用").slice(0, 2);
   const existing = {
@@ -467,9 +467,11 @@ test("editing recommendation text retains its previously selected roles", async 
   };
   const app = await harness({ existing: [existing], slug: existing.slug });
   assert.deepEqual(app.selectedRoles(), roles);
-  app.input("r-recommendation", "Useful for preparing handouts every week.");
+  app.input("r-description", "Prepare fresh PDF handouts every week.");
   await app.submit();
   assert.deepEqual(app.db.skills[0].roles, roles);
+  assert.equal(app.db.skills[0].description, "Prepare fresh PDF handouts every week.");
+  assert.equal(app.db.skills[0].recommendation, existing.recommendation);
 });
 
 test("general and individual roles are mutually exclusive while roles remain optional", async () => {
@@ -491,7 +493,6 @@ test("an imported Skill needs a function title before sharing and keeps its orig
   app.input("r-url", result.skill.source.url);
   await app.read();
   assert.equal(app.element("r-display-title").value, "");
-  app.input("r-recommendation", "Useful for preparing course handouts.");
   await app.submit();
   assert.equal(app.db.skills.length, 0);
   assert.match(app.element("recommend-error").textContent, /功能标题/);
@@ -511,7 +512,6 @@ test("an automatic source read preserves a function title the sharer already ent
   await app.read();
   assert.equal(app.element("r-display-title").value, "整理每周课程讲义");
   assert.equal(app.element("r-title").value, result.skill.title);
-  app.input("r-recommendation", "Useful for preparing course handouts.");
   await app.submit();
   assert.equal(app.db.skills[0].display_title, "整理每周课程讲义");
 });

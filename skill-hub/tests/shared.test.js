@@ -204,12 +204,27 @@ test("legacy uploaded skills remain visible alongside external recommendations",
   assert.deepEqual(filterSkills([uploaded, external], { source: "external" }), [external]);
 });
 
-test("search includes the recommendation and original author, and composes with filters", () => {
+test("search includes descriptions and original authors, and composes with filters", () => {
   const items = [uploaded, external, other];
-  assert.deepEqual(filterSkills(items, { q: "每周行业", source: "external", category: "资讯采集" }), [external]);
+  assert.deepEqual(filterSkills(items, { q: "the web", source: "external", category: "资讯采集" }), [external]);
   assert.deepEqual(filterSkills(items, { q: "EXAMPLE TEAM" }), [external]);
   assert.deepEqual(filterSkills(items, { q: " CSV " }), [uploaded]);
-  assert.deepEqual(filterSkills(items, { q: "每周行业", category: "文案生成" }), []);
+  assert.deepEqual(filterSkills(items, { q: "the web", category: "文案生成" }), []);
+  const colleague = { ...uploaded, author: { display_name: "分享同事小林" } };
+  assert.deepEqual(filterSkills([colleague], { q: "小林" }), [colleague]);
+});
+
+test("hidden legacy recommendation fields cannot produce search matches", () => {
+  const legacy = {
+    ...external, recommendation_reason: "旧推荐理由", recommendation_note: "旧使用心得"
+  };
+  for (const q of ["每周行业", "旧推荐理由", "旧使用心得"]) {
+    assert.deepEqual(filterSkills([legacy], { q }), []);
+  }
+  assert.deepEqual(filterSkills([legacy], { q: "Research" }), [legacy]);
+  assert.equal(legacy.recommendation, "适合准备每周行业选题");
+  assert.equal(legacy.recommendation_reason, "旧推荐理由");
+  assert.equal(legacy.recommendation_note, "旧使用心得");
 });
 
 test("roles are normalized without treating old or malformed data as universal", () => {

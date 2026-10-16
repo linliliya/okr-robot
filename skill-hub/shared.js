@@ -217,8 +217,8 @@
       if (source && source !== "all" && sourceType(skill) !== source) return false;
       const roles = normalizeRoles(skill.roles);
       if (role && (!ROLE_OPTIONS.includes(role) || (!roles.includes(role) && !roles.includes("通用")))) return false;
-      const searchable = [getDisplayTitle(skill), skill.title, skill.description, skill.tags, skill.recommendation,
-        skill.recommendation_reason, skill.recommendation_note, skill.original_author, skill.originalAuthor,
+      const searchable = [getDisplayTitle(skill), skill.title, skill.description, skill.tags,
+        skill.original_author, skill.originalAuthor,
         skill.author?.display_name, skill.source_url, skill.source_path, roles.join(" ")].filter(Boolean).join(" ").toLowerCase();
       return !query || searchable.includes(query);
     });

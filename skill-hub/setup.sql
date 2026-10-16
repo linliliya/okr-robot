@@ -116,7 +116,6 @@ alter table public.skills
       and position(chr(92) in source_url) = 0
       and length(source_key) > 0
       and source_key !~ '[[:space:][:cntrl:]]'
-      and recommendation ~ '[^[:space:]]'
       and title ~ '[^[:space:]]'
     )
   ),
@@ -151,7 +150,7 @@ create policy "登录用户可更新" on public.skills
   with check (source_type = 'upload' or auth.uid() = author_id);
 
 -- 避免利用内部条目的协作权限，改作者、改来源类型或绕过来源去重。
--- 换来源需要新建条目；推荐理由、试用记录等内容仍可修改。
+-- 换来源需要新建条目；简介、试用记录等内容仍可修改。
 create or replace function public.protect_skill_source_identity()
 returns trigger
 language plpgsql set search_path = public

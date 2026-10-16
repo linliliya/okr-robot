@@ -110,6 +110,17 @@ test("function titles and original names are escaped in cards and details", asyn
   assert.doesNotMatch(app.element("app").innerHTML, /<img|<script/);
 });
 
+test("legacy recommendation reasons stay hidden in cards and details while the introduction remains visible", async () => {
+  const app = harness({ skill: { description: "提取 PDF 中的课程资料。", recommendation: "旧版单独填写的推荐原因" } });
+  assert.ok(app.cardHTML().includes(app.skill.description));
+  assert.equal(app.cardHTML().includes(app.skill.recommendation), false);
+  assert.doesNotMatch(app.cardHTML(), /class="card-reason"/);
+  await app.showDetail();
+  assert.ok(app.element("app").innerHTML.includes(app.skill.description));
+  assert.equal(app.element("app").innerHTML.includes(app.skill.recommendation), false);
+  assert.doesNotMatch(app.element("app").innerHTML, /为什么推荐给同事|prose recommendation/);
+});
+
 test("editing the function title updates only display metadata and leaves installation identity intact", async () => {
   const app = harness();
   const before = { ...app.skill }, installBefore = H.buildInstallPrompt(app.skill);
