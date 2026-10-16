@@ -406,7 +406,7 @@
     const isLogin = mode === 'login';
     $app.innerHTML = `
       <div class="auth-wrap"><div class="auth-card">
-        <div class="auth-brand">训练营周复盘</div>
+        <div class="auth-brand">运营分析系统</div>
         <div class="auth-sub">每期训练营的邀约、到课、转化数据，复盘会上一起看</div>
         <div class="seg" role="tablist">
           <button type="button" class="${isLogin ? 'active' : ''}" data-auth="login">登录</button>
@@ -556,7 +556,7 @@
     const chOpts = [['all', '全部渠道'], ...CH_ORDER.map(ch => [ch, chLabel(ch)])];
     const excluded = report.issues.filter(i => i.code === 'invalid_date');
     $app.innerHTML = `<div class="page-head"><div><h1>月度复盘</h1>
-        <p class="review-hint">按期次直播日期归属月份，后续补齐尾款仍计入原直播月份。</p></div><div class="spacer"></div><a class="btn ghost" href="#/new">录入数据</a></div>
+        <p class="review-hint">自动整合系统里各期复盘的数据，按直播月份汇总。后续补齐尾款仍计入原直播月份。</p></div><div class="spacer"></div><a class="btn ghost" href="#/">返回复盘看板</a></div>
       <div class="dash-bar monthly-toolbar">
         <div class="week-nav">
           <button class="btn-icon" type="button" data-month-step="-1" aria-label="上个月" ${Monthly.shiftMonth(month, -1) ? '' : 'disabled'}>‹</button>
@@ -592,14 +592,15 @@
             ${['totalDeals', 'liveDeals', 'directDeals', 'alumniDeals', 'refunds'].map(key => `<td class="num">${monthValueHTML(m.metrics[key])}</td>`).join('')}
             <td>${i ? esc(monthChange(m, report.months[i - 1], 'totalDeals')) : '参照月不在本表'}</td><td>${esc(monthStatus(m))}</td></tr>`).join('')}</tbody></table></div>
       </section>
-      <section class="section"><div class="section-head"><h3>本月成交明细</h3><span class="section-sub">可回到来源期次核对或补录</span></div>
+      ${monthlyCohortsHTML(selected)}
+      <details class="details monthly-rules"><summary>展开各期的每日成交明细</summary><div class="details-body">
         <p class="review-hint">列出本月直播期次的全部成交记录，成交日期可以跨月。</p>
         ${selected.rows.length ? `<div class="table-wrap"><table class="tbl"><thead><tr><th>成交表日期</th><th>渠道</th><th>来源期次</th><th class="num">直播成交</th><th class="num">一对一成交</th><th class="num">老学员</th><th class="num">B站退款</th><th class="num">总成交</th></tr></thead>
           <tbody>${selected.rows.map(r => `<tr data-monthly-source="${esc(r.cohort.id)}"><td>${esc(r.date)}</td><td>${chTag(r.cohort.channel)}</td><td class="wrap"><a href="#/edit/${encodeURIComponent(r.cohort.id)}">${esc(r.cohort.name || '未命名')}</a><span class="monthly-cell-note">成交表第 ${r.rowIndex + 1} 行${r.cohort.closed ? '' : ' · 未收口'}</span></td>
             ${['liveDeals', 'directDeals', 'alumniDeals', 'refunds', 'totalDeals'].map(key => `<td class="num">${r.values[key] == null ? '待补齐' : esc(int(r.values[key]))}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`
           : '<div class="monthly-empty"><p>这个月还没有可汇总的成交记录。</p><p>可切换月份，或在本月直播的期次中补录「每日成交」数据。</p></div>'}
         ${selected.cohorts.filter(c => !c.data?.conversions?.length).length ? `<p class="monthly-notice">以下期次尚未录入成交表 ${selected.cohorts.filter(c => !c.data?.conversions?.length).map(c => `<a href="#/edit/${encodeURIComponent(c.id)}">${esc(c.name || '未命名')}</a>`).join('、')}</p>` : ''}
-      </section>
+      </div></details>
       ${report.issues.length ? `<details class="details monthly-issues"><summary>数据核对 · ${report.issues.length} 处需要留意</summary><div class="details-body"><p class="review-hint">以下覆盖当前渠道的全部期次。缺少有效直播日期的期次暂不计入月度统计；成交缺项会标为待补齐。</p><ul>${report.issues.map(issue => `<li><a href="#/edit/${encodeURIComponent(issue.cohort.id)}">${esc(issue.cohort.name || '未命名')}</a>${Number.isInteger(issue.rowIndex) && issue.rowIndex >= 0 ? ` · 成交表第 ${issue.rowIndex + 1} 行` : ''}<p>${esc(issue.message)}</p></li>`).join('')}</ul></div></details>` : ''}`;
 
     const update = () => {
@@ -620,6 +621,17 @@
       viewMonthly(++routeSeq, p);
     };
     drawMonthlyTrend(report.months);
+  }
+
+  function monthlyCohortsHTML(month) {
+    return `<section class="section"><div class="section-head"><h3>本月各期复盘汇总</h3><span class="section-sub">共 ${month.cohortCount} 期，直接使用已保存的复盘数据</span></div>
+      <p class="review-hint">每行对应一期复盘，月度成交由这些期次自动累计。补录和修改仍在原期次中进行。</p>
+      ${month.cohorts.length ? `<div class="table-wrap"><table class="tbl monthly-cohorts"><thead><tr><th>直播日期</th><th>渠道</th><th>期次</th><th class="num">直播成交</th><th class="num">一对一成交</th><th class="num">总成交</th><th>状态</th><th>原期复盘</th></tr></thead>
+        <tbody>${month.cohorts.map(c => `<tr data-monthly-cohort="${esc(c.id)}"><td>${esc(c.live_date)}</td><td>${chTag(c.channel)}</td><td class="wrap">${esc(c.name || '未命名')}</td>
+          ${['liveDeals', 'directDeals', 'totalDeals'].map(key => { const value = R.metricValue(c, key); return `<td class="num">${value == null ? '待补齐' : esc(int(value))}</td>`; }).join('')}
+          <td>${c.closed ? '已收口' : '未收口'}</td><td><a data-monthly-review href="#/?week=${esc(weekOf(c.live_date))}&ch=${esc(c.channel)}&cohort=${encodeURIComponent(c.id)}">查看本期复盘</a></td></tr>`).join('')}</tbody>
+        <tfoot><tr><th colspan="3">本月合计</th>${['liveDeals', 'directDeals', 'totalDeals'].map(key => `<td class="num">${monthValueHTML(month.metrics[key])}</td>`).join('')}<td colspan="2"></td></tr></tfoot></table></div>`
+        : '<div class="monthly-empty">这个月还没有录入期次，已有期次保存后会自动出现在这里。</div>'}</section>`;
   }
 
   function drawMonthlyTrend(months) {
@@ -904,7 +916,8 @@
           ${c.closed ? '' : '<div class="ph-volatile">这期数据还可能变化</div>'}
         </div>
         <div class="ph-side">
-          <a class="btn small ghost no-present" href="#/edit/${encodeURIComponent(c.id)}">编辑数据</a>
+          <div class="ph-links no-present"><a class="btn small ghost" href="#/edit/${encodeURIComponent(c.id)}">编辑数据</a>
+            <a class="btn small ghost" data-cohort-monthly href="#/monthly?month=${esc(c.live_date.slice(0, 7))}">查看本月汇总</a></div>
           <div class="ph-meta">${c.updated_by_name ? esc(c.updated_by_name) + ' ' : ''}最后更新于 ${esc(fmtTime(c.updated_at))}</div>
         </div>
       </div>`;

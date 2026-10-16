@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="light">
-<title>训练营复盘</title>
+<title>运营分析系统</title>
 <style>
   :root {
     --bg: #f4f5f7; --card: #ffffff; --soft: #f8f9fb; --track: #eef0f4;
@@ -438,6 +438,7 @@
   .trend-grid.counts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 
   /* 月度复盘 */
+  .ph-links { display: flex; gap: 8px; flex-wrap: wrap; }
   .monthly-toolbar { margin-top: 22px; }
   .monthly-picker { display: flex; align-items: center; gap: 10px; font-size: .85rem; color: var(--muted); }
   .monthly-picker input { border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; font: inherit; color: var(--ink); background: #fff; max-width: 200px; min-width: 0; }
@@ -665,7 +666,7 @@
 <body>
 <header class="topbar" id="topbar">
   <div class="topbar-inner">
-    <a class="logo" href="#/">训练营复盘</a>
+    <a class="logo" href="#/">运营分析系统</a>
     <nav class="nav" id="nav" hidden>
       <a href="#/" data-nav="/">复盘看板</a>
       <a href="#/monthly" data-nav="/monthly">月度复盘</a>
