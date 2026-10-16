@@ -519,7 +519,7 @@
     }
     if (seq !== routeSeq) return;
     state.monthly = {
-      month: Monthly.validMonth(params.get('month')) ? params.get('month') : Monthly.today().slice(0, 7),
+      month: Monthly.displayMonth(params.get('month')),
       channel: CH_ORDER.includes(params.get('ch')) ? params.get('ch') : 'all',
     };
     renderMonthly();
@@ -528,6 +528,7 @@
   function monthChange(current, previous, key) {
     const value = current.metrics[key].value, before = previous.metrics[key].value;
     if (value == null) return current.cohortCount ? '数据待补齐' : '尚无期次';
+    if (current.key === Monthly.START_MONTH) return '起始月份，暂无环比';
     if (before == null) return '上月暂无可比数据';
     const delta = value - before;
     const count = `${delta > 0 ? '+' : ''}${int(delta)} 人`;
@@ -559,8 +560,8 @@
         <p class="review-hint">自动整合系统里各期复盘的数据，按直播月份汇总。后续补齐尾款仍计入原直播月份。</p></div><div class="spacer"></div><a class="btn ghost" href="#/">返回复盘看板</a></div>
       <div class="dash-bar monthly-toolbar">
         <div class="week-nav">
-          <button class="btn-icon" type="button" data-month-step="-1" aria-label="上个月" ${Monthly.shiftMonth(month, -1) ? '' : 'disabled'}>‹</button>
-          <label class="monthly-picker">复盘月份<input id="monthly-select" type="month" min="1000-01" max="9999-12" value="${esc(month)}" aria-label="复盘月份"></label>
+          <button class="btn-icon" type="button" data-month-step="-1" aria-label="上个月" ${month > Monthly.START_MONTH ? '' : 'disabled'}>‹</button>
+          <label class="monthly-picker">复盘月份<input id="monthly-select" type="month" min="${Monthly.START_MONTH}" max="9999-12" value="${esc(month)}" aria-label="复盘月份"></label>
           <button class="btn-icon" type="button" data-month-step="1" aria-label="下个月" ${Monthly.shiftMonth(month, 1) ? '' : 'disabled'}>›</button>
         </div>
         <div class="seg" role="group" aria-label="月度渠道筛选">${chOpts.map(([ch, label]) => `<button type="button" data-month-channel="${ch}" class="${state.monthly.channel === ch ? 'active' : ''}" aria-pressed="${state.monthly.channel === ch}">${esc(label)}</button>`).join('')}</div>
@@ -584,13 +585,13 @@
         <p>人数沿用运营表的统计，没有学员明细可供跨期去重。</p>
         <p>空白和缺项不会当作 0。只有明确填写的 0 才表示零成交；缺项月份的走势图会留空，可在数据表中查看已完整行的小计。</p>
       </div></details>
-      <section class="section monthly-trend"><div class="section-head"><h3>月度成交趋势</h3><span class="section-sub">截至所选月份，最近 12 个自然月</span></div>
+      <section class="section monthly-trend"><div class="section-head"><h3>月度成交趋势</h3><span class="section-sub">${esc(Monthly.monthLabel(report.months[0].key))} 至 ${esc(Monthly.monthLabel(month))}</span></div>
         <p class="review-hint">总成交包含老学员，并扣除 B站退款。没有期次或成交数据缺项的月份留空，未收口期次仍会变化。</p>
-        ${typeof window.Chart === 'function' ? '<div class="monthly-chart"><canvas id="monthly-chart" role="img" aria-label="最近12个月总成交、直播成交和一对一成交趋势，详细数值见下方表格"></canvas></div>' : '<p class="monthly-notice">走势图暂时无法加载，完整数据仍可在下表查看。</p>'}
+        ${typeof window.Chart === 'function' ? '<div class="monthly-chart"><canvas id="monthly-chart" role="img" aria-label="所示月份的总成交、直播成交和一对一成交趋势，详细数值见下方表格"></canvas></div>' : '<p class="monthly-notice">走势图暂时无法加载，完整数据仍可在下表查看。</p>'}
         <div class="table-wrap"><table class="tbl monthly-table"><caption class="monthly-caption">月度成交数据 · 单位为人</caption><thead><tr><th>月份</th><th class="num">总成交</th><th class="num">直播成交</th><th class="num">一对一成交</th><th class="num">老学员</th><th class="num">B站退款</th><th>总成交环比</th><th>数据状态</th></tr></thead>
           <tbody>${report.months.map((m, i) => `<tr data-month-row="${m.key}" ${m.key === month ? 'class="monthly-selected"' : ''}><th scope="row"><a href="#/monthly?month=${m.key}${state.monthly.channel === 'all' ? '' : '&ch=' + state.monthly.channel}" ${m.key === month ? 'aria-current="date"' : ''}>${esc(Monthly.monthLabel(m.key))}</a></th>
             ${['totalDeals', 'liveDeals', 'directDeals', 'alumniDeals', 'refunds'].map(key => `<td class="num">${monthValueHTML(m.metrics[key])}</td>`).join('')}
-            <td>${i ? esc(monthChange(m, report.months[i - 1], 'totalDeals')) : '参照月不在本表'}</td><td>${esc(monthStatus(m))}</td></tr>`).join('')}</tbody></table></div>
+            <td>${i ? esc(monthChange(m, report.months[i - 1], 'totalDeals')) : m.key === Monthly.START_MONTH ? '起始月份，暂无环比' : '参照月不在本表'}</td><td>${esc(monthStatus(m))}</td></tr>`).join('')}</tbody></table></div>
       </section>
       ${monthlyCohortsHTML(selected)}
       <details class="details monthly-rules"><summary>展开各期的每日成交明细</summary><div class="details-body">
@@ -601,7 +602,7 @@
           : '<div class="monthly-empty"><p>这个月还没有可汇总的成交记录。</p><p>可切换月份，或在本月直播的期次中补录「每日成交」数据。</p></div>'}
         ${selected.cohorts.filter(c => !c.data?.conversions?.length).length ? `<p class="monthly-notice">以下期次尚未录入成交表 ${selected.cohorts.filter(c => !c.data?.conversions?.length).map(c => `<a href="#/edit/${encodeURIComponent(c.id)}">${esc(c.name || '未命名')}</a>`).join('、')}</p>` : ''}
       </div></details>
-      ${report.issues.length ? `<details class="details monthly-issues"><summary>数据核对 · ${report.issues.length} 处需要留意</summary><div class="details-body"><p class="review-hint">以下覆盖当前渠道的全部期次。缺少有效直播日期的期次暂不计入月度统计；成交缺项会标为待补齐。</p><ul>${report.issues.map(issue => `<li><a href="#/edit/${encodeURIComponent(issue.cohort.id)}">${esc(issue.cohort.name || '未命名')}</a>${Number.isInteger(issue.rowIndex) && issue.rowIndex >= 0 ? ` · 成交表第 ${issue.rowIndex + 1} 行` : ''}<p>${esc(issue.message)}</p></li>`).join('')}</ul></div></details>` : ''}`;
+      ${report.issues.length ? `<details class="details monthly-issues"><summary>数据核对 · ${report.issues.length} 处需要留意</summary><div class="details-body"><p class="review-hint">核对当前渠道的期次，2026 年 8 月前的期次暂不展示。缺少有效直播日期的期次暂不计入月度统计；成交缺项会标为待补齐。</p><ul>${report.issues.map(issue => `<li><a href="#/edit/${encodeURIComponent(issue.cohort.id)}">${esc(issue.cohort.name || '未命名')}</a>${Number.isInteger(issue.rowIndex) && issue.rowIndex >= 0 ? ` · 成交表第 ${issue.rowIndex + 1} 行` : ''}<p>${esc(issue.message)}</p></li>`).join('')}</ul></div></details>` : ''}`;
 
     const update = () => {
       const h = `#/monthly?month=${state.monthly.month}${state.monthly.channel === 'all' ? '' : '&ch=' + state.monthly.channel}`;
@@ -609,11 +610,11 @@
     };
     document.getElementById('monthly-select').onchange = e => {
       if (!Monthly.validMonth(e.target.value)) { e.target.value = state.monthly.month; return; }
-      state.monthly.month = e.target.value; update();
+      state.monthly.month = Monthly.displayMonth(e.target.value); update();
     };
     $app.querySelectorAll('[data-month-step]').forEach(b => { b.onclick = () => {
       const next = Monthly.shiftMonth(state.monthly.month, Number(b.dataset.monthStep));
-      if (next) { state.monthly.month = next; update(); }
+      if (next && next >= Monthly.START_MONTH) { state.monthly.month = next; update(); }
     }; });
     $app.querySelectorAll('[data-month-channel]').forEach(b => { b.onclick = () => { state.monthly.channel = b.dataset.monthChannel; update(); }; });
     document.getElementById('monthly-refresh').onclick = () => {

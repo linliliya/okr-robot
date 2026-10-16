@@ -5,6 +5,7 @@
 })(typeof window !== 'undefined' ? window : globalThis, function (L, R) {
   'use strict';
 
+  const START_MONTH = '2026-08';
   const CHANNELS = ['xiaoe', 'bilibili'];
   const METRICS = ['totalDeals', 'liveDeals', 'directDeals', 'alumniDeals', 'refunds'];
   const LABELS = { balance: '已付尾款', live_full: '直播全款', direct: '1v1 追单', alumni: '老学员', refund: '退款' };
@@ -13,6 +14,11 @@
 
   function validMonth(value) {
     return typeof value === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(value) && +value.slice(0, 4) > 0;
+  }
+
+  function displayMonth(value) {
+    const month = validMonth(value) ? value : today().slice(0, 7);
+    return month < START_MONTH ? START_MONTH : month;
   }
 
   function shiftMonth(value, delta) {
@@ -78,9 +84,9 @@
   function buildMonthly(cohorts, options) {
     const opts = object(options);
     const now = validDate(opts.today) ? opts.today : today();
-    const selected = validMonth(opts.month) ? opts.month : now.slice(0, 7);
+    const selected = displayMonth(validMonth(opts.month) ? opts.month : now.slice(0, 7));
     const channel = CHANNELS.includes(opts.channel) ? opts.channel : 'all';
-    const months = Array.from({ length: 12 }, (_, i) => shiftMonth(selected, i - 11)).filter(Boolean).map(emptyMonth);
+    const months = Array.from({ length: 12 }, (_, i) => shiftMonth(selected, i - 11)).filter(key => key >= START_MONTH).map(emptyMonth);
     const buckets = new Map(months.map(month => [month.key, month]));
     const previousKey = shiftMonth(selected, -1);
     const issues = [];
@@ -100,6 +106,7 @@
           message: '直播日期缺失或无效，请补全年月日后再统计' });
         continue;
       }
+      if (cohort.live_date.slice(0, 7) < START_MONTH) continue;
       const month = buckets.get(cohort.live_date.slice(0, 7));
       if (month) {
         const key = cohort.id == null ? cohort : String(cohort.id);
@@ -154,5 +161,5 @@
     };
   }
 
-  return { validMonth, shiftMonth, monthLabel, today, buildMonthly };
+  return { START_MONTH, validMonth, displayMonth, shiftMonth, monthLabel, today, buildMonthly };
 });
