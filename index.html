@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="color-scheme" content="light">
-  <meta name="description" content="果粒科技内部工具首页：训练营周复盘、Skill 市集、OKR 月度排期与训练营排期。">
+  <meta name="description" content="果粒科技内部工具首页，提供训练营周复盘、月度复盘、Skill 市集、OKR 月度排期与训练营排期。">
   <title>内部工具 · 果粒科技</title>
   <style>
     :root {
@@ -44,7 +44,7 @@
     .section-heading h2 { margin: 0; font-size: 14px; font-weight: 650; }
     .section-heading span { color: var(--muted); font-size: 12px; }
     .section-heading::after { content: ""; height: 1px; background: var(--line); flex: 1; margin-left: 4px; }
-    .work-grid { display: grid; grid-template-columns: 1.35fr 1fr; gap: 18px; }
+    .work-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
     .schedule-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
     .tool { min-width: 0; position: relative; display: flex; flex-direction: column; padding: 27px; border: 1px solid var(--line); border-radius: 16px; background: var(--paper); transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
     .tool:hover { transform: translateY(-3px); box-shadow: 0 10px 24px #2633220a; border-color: #b8c3b9; }
@@ -73,6 +73,7 @@
     .footer-brand { font-size: 10px; letter-spacing: .14em; }
     @media (max-width: 800px) {
       .wrap { padding: 0 24px; }
+      .work-grid { grid-template-columns: 1fr; }
       .brand-en { display: none; }
       .schedule-grid { grid-template-columns: 1fr; }
       .schedule-grid .tool { display: grid; grid-template-columns: 44px 1fr 20px; column-gap: 18px; padding: 22px; align-items: center; }
@@ -143,6 +144,12 @@
           <h3 id="review-name">训练营周复盘</h3>
           <p id="review-desc">查看转化数据与趋势，沉淀本期经验，追踪上期行动效果，明确下一期怎么做。</p>
           <div class="tool-bottom"><span>进入复盘看板</span><svg class="arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></div>
+        </a>
+        <a class="tool" href="./camp-review/index.html#/monthly" aria-labelledby="monthly-name" aria-describedby="monthly-desc">
+          <div class="tool-top"><span class="tool-icon blue"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4m10-4v4M3 10h18m-14 7v-3m5 3v-5m5 5v-2"/></svg></span><span class="tool-kind">月度汇总</span></div>
+          <h3 id="monthly-name">训练营月度复盘</h3>
+          <p id="monthly-desc">按直播月份汇总各期成交人数，对比月度趋势，查看各渠道的成交变化。</p>
+          <div class="tool-bottom"><span>查看月度成交</span><svg class="arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></div>
         </a>
         <a class="tool" href="./skill-hub/index.html" aria-labelledby="skills-name" aria-describedby="skills-desc">
           <div class="tool-top"><span class="tool-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M17.5 3v7M14 6.5h7"/></svg></span><span class="tool-kind">团队知识</span></div>

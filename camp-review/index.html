@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="light">
-<title>训练营周复盘</title>
+<title>训练营复盘</title>
 <style>
   :root {
     --bg: #f4f5f7; --card: #ffffff; --soft: #f8f9fb; --track: #eef0f4;
@@ -436,6 +436,36 @@
   .trend-open { display: block; font-size: .7rem; color: var(--muted); margin-top: 3px; }
   .trend-group-title { margin: 18px 0 10px; font-size: .9rem; color: var(--ink-2); }
   .trend-grid.counts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+  /* 月度复盘 */
+  .monthly-toolbar { margin-top: 22px; }
+  .monthly-picker { display: flex; align-items: center; gap: 10px; font-size: .85rem; color: var(--muted); }
+  .monthly-picker input { border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; font: inherit; color: var(--ink); background: #fff; max-width: 200px; min-width: 0; }
+  .monthly-heading { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; margin: 22px 0 16px; }
+  .monthly-heading h2 { font-size: 1.4rem; }
+  .monthly-heading span, .monthly-open { font-size: .85rem; color: var(--muted); }
+  .monthly-notice { font-size: .85rem; background: #edf2fa; color: #3b5271; padding: 12px 16px; border-radius: 10px; line-height: 1.7; margin: 12px 0; }
+  .monthly-open { margin-bottom: 16px; }
+  .monthly-na { font-size: 1.45rem; color: var(--muted); }
+  .monthly-rules { background: #fff; margin: 12px 0 24px; }
+  .monthly-prose { display: grid; gap: 8px; font-size: .85rem; color: var(--ink-2); }
+  .monthly-chart { height: 320px; position: relative; margin: 20px 0; }
+  .monthly-table { margin-top: 16px; }
+  .monthly-table th[scope="row"] { background: transparent; }
+  .monthly-table .monthly-selected { background: #eef2ff; }
+  .monthly-cell-note { display: block; font-size: .75rem; color: var(--muted); margin-top: 3px; font-weight: 400; }
+  .monthly-caption { text-align: left; font-size: .8rem; color: var(--muted); padding: 0 0 10px; }
+  .monthly-empty { text-align: center; color: var(--muted); padding: 30px 12px; font-size: .9rem; line-height: 1.8; }
+  .monthly-issues { background: #fff; }
+  .monthly-issues ul { padding-left: 20px; margin-top: 12px; max-height: 360px; overflow-y: auto; }
+  .monthly-issues li { margin: 10px 0; font-size: .85rem; }
+  .monthly-issues li p { color: var(--muted); margin-top: 3px; }
+  @media (max-width: 640px) {
+    .monthly-picker { flex: 1; justify-content: center; gap: 6px; }
+    .monthly-picker input { max-width: 158px; }
+    .monthly-chart { height: 260px; }
+    .monthly-heading { gap: 6px; align-items: flex-start; flex-direction: column; }
+  }
   .lesson-toolbar { display: flex; gap: 16px; align-items: flex-end; margin: 20px 0 4px; }
   .lesson-toolbar .review-field { margin: 0; min-width: 150px; }
   .lesson-toolbar .lesson-search { flex: 1; }
@@ -635,9 +665,10 @@
 <body>
 <header class="topbar" id="topbar">
   <div class="topbar-inner">
-    <a class="logo" href="#/">训练营周复盘</a>
+    <a class="logo" href="#/">训练营复盘</a>
     <nav class="nav" id="nav" hidden>
       <a href="#/" data-nav="/">复盘看板</a>
+      <a href="#/monthly" data-nav="/monthly">月度复盘</a>
       <a href="#/review" data-nav="/review">经验沉淀</a>
       <a href="#/list" data-nav="/list">全部期次</a>
       <a href="#/new" data-nav="/new">录入数据</a>
@@ -662,6 +693,7 @@
 <script src="config.js"></script>
 <script src="logic.js"></script>
 <script src="review.js"></script>
+<script src="monthly.js"></script>
 <script src="insights.js"></script>
 <script src="review-ui.js"></script>
 <script src="db.js"></script>
