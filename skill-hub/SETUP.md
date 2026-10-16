@@ -1,92 +1,106 @@
-# Skill 市集 · 上线步骤（约 5-10 分钟）
+# Skill 市集配置与升级
 
-页面代码已经写好，push 到 GitHub 就会自动部署到
-`https://internal.aurange.cn/skill-hub/`。
-但平台需要一个免费的云端数据库来存账号和 skill 文件，按下面步骤配置一次即可。
+Skill 市集使用 Supabase 保存账号、Skill 信息和上传的 ZIP 文件。页面位于 [公司 Skill 市集](https://internal.aurange.cn/skill-hub/)，项目地址与公开客户端密钥放在本目录的 `config.js` 中。
 
-## 第 1 步：注册 Supabase（免费）
+## 已有站点升级
 
-1. 打开 https://supabase.com ，用 GitHub 账号或邮箱注册
-2. 点 **New project** 创建项目：
-   - Name 随便填，比如 `skill-hub`
-   - Database Password 设置一个并**保存好**（后面基本用不到，但丢了麻烦）
-   - Region 选 **Northeast Asia (Tokyo)** 或 **Southeast Asia (Singapore)**，国内访问快一些
-3. 等 1-2 分钟项目初始化完成
+1. 在当前 Supabase 项目中打开 **SQL Editor**，新建查询。
+2. 还没有外部推荐功能的站点，先完整执行 `update-external-skills.sql`。
+3. 完整执行当前版本的 `update-skill-roles.sql`，增加或更新适用岗位。执行过旧版岗位脚本的站点也需要重跑这一步。
+4. 确认两份迁移都已执行成功，再发布本目录的页面代码。
 
-## 第 2 步：初始化数据库
+两份迁移都可以重复执行，每份脚本的修改都在各自的事务内完成。如果执行失败，数据库会回滚这份脚本的修改。根据报错处理数据或权限问题后，再完整重跑。
 
-1. 左侧菜单点 **SQL Editor** → **New query**
-2. 打开本目录下的 `setup.sql`，全选复制，粘贴进去
-3. 点右下角 **Run**，看到 `Success. No rows returned` 就成功了
+历史条目会自动归为「内部上传」，原有 ZIP、版本与下载数保留。旧上传页面不传 `source_type` 时，也会按内部上传处理。岗位默认留空，表示尚未标注；不会根据作者所在部门替条目猜岗位。已有站点只需执行增量脚本，无需重跑 `setup.sql`。
 
-## 第 3 步：拿到项目地址和密钥
+岗位脚本会将已有的「市场运营」改为「课程运营」，移除「客户服务」「研发工程师」「财务」「管理者」。其余岗位保留原顺序，重复项只保留第一次出现的位置。移除后没有岗位的条目回到未标注状态。遇到未知岗位或格式异常时，整份脚本会回滚，不会默默丢弃这些值。
 
-Supabase 2025 年改版后密钥页面搬了位置，按新版界面操作：
+## 全新安装
 
-1. **项目地址（Project URL）**：项目主页顶部点 **Connect** 按钮，
-   弹窗里就能看到（形如 `https://xxxx.supabase.co`）。
-   或者：左侧 **Project Settings**（齿轮图标）→ **Data API** 也有。
-2. **密钥**：左侧 **Project Settings** → **API Keys**：
-   - 看到 **Publishable key**（`sb_publishable_` 开头）就复制它；
-   - 如果没有，点 **Create new API keys** 生成一个再复制；
-   - 老项目也可以切到 **Legacy API Keys** 标签页复制 **anon public**
-     key（很长的一串）——两种密钥都能用，效果一样。
-3. 打开本目录的 `config.js`，把这两个值分别填进
-   `SUPABASE_URL` 和 `SUPABASE_ANON_KEY`
+1. 创建 Supabase 项目，等待项目可用。
+2. 在 **SQL Editor** 中完整执行 `setup.sql`。它已包含用户资料、内部上传、外部推荐、适用岗位、文件存储与权限规则，无需再执行增量脚本。
+3. 从项目设置中取得 Project URL，以及 Publishable key 或旧版 anon public key，分别填入 `config.js` 的 `SUPABASE_URL` 和 `SUPABASE_ANON_KEY`。
+4. 按公司现有登录方式设置邮箱注册和验证规则，再发布页面。
 
-> Publishable key / anon key 是设计为可以公开放在网页里的，数据安全
-> 由数据库的行级权限规则（setup.sql 里已配好）保证，不用担心泄露问题。
+网页只使用公开客户端密钥。不要把 service role key 或数据库密码写进 `config.js`。读写权限由 SQL 中的行级权限规则控制。
 
-## 第 4 步：关闭邮箱验证（重要）
+## 认证返回地址
 
-默认注册后要点邮件里的验证链接才能登录，对同事来说太麻烦：
+三个应用共用同一个 Supabase Auth。更换域名时，同步检查 **Authentication → URL Configuration** 中的地址，保留末尾的 `/`。
 
-1. 左侧菜单 **Authentication** → **Sign In / Providers** → **Email**
-2. 把 **Confirm email** 开关关掉 → Save
+| 配置 | 地址 |
+| --- | --- |
+| Site URL | `https://internal.aurange.cn/skill-hub/` |
+| Redirect URL | `https://internal.aurange.cn/skill-hub/` |
+| Redirect URL | `https://internal.aurange.cn/camp-review/` |
+| Redirect URL | `https://internal.aurange.cn/sales-script/` |
 
-## 发布前：检查认证域名配置
+## 分享与安装
 
-在 Supabase 的 **Authentication** → **URL Configuration** 中维护以下配置，
-这些地址已在后台保存并验证：
+页面统一使用「分享 Skill」入口，打开后选择上传文件或分享网上的 Skill。内部上传继续接收 ZIP，并保留版本历史。分享网上的 Skill 时，先粘贴 GitHub 或 skills.sh 链接，页面会读取仓库里的 `SKILL.md`，填写名称、用途和作者，再写一句推荐理由即可发布。仓库里有多个 Skill 时，先选中要分享的那一个。
 
-- **Site URL**：`https://internal.aurange.cn/skill-hub/`
-- **Redirect URLs**：逐条填写以下三个精确地址，保留末尾的 `/`：
-  - `https://internal.aurange.cn/skill-hub/`
-  - `https://internal.aurange.cn/camp-review/`
-  - `https://internal.aurange.cn/sales-script/`
+自动读取保留原项目的文字，不会自动生成推荐理由或试用记录。分类是根据内容初步判断的，可以在「查看或修改基本信息」里调整；试用情况和安装补充放在「补充使用经验」里。其他网站、私有仓库或暂时读不到的项目可以手动填写。
 
-三个应用共用同一个 Supabase Auth。以后更换域名时，需要同步更新这里的
-Site URL 和 Redirect URLs，确保认证后的返回地址仍指向正确的应用。
+读取使用公开 GitHub API，不需要配置密钥或增加后端。网络不可用、GitHub 限流或文件不完整时，页面会说明原因，并展开手动填写区域。未登录 GitHub 的 API 请求额度按出口 IP 计算，公司网络可能共用额度。自动读取只查看文件内容，不会安装或执行 Skill。
 
-## 第 5 步：发布
+推荐理由写清这个 Skill 适合公司哪项工作，同事会更容易判断是否值得尝试。勾选已试用时，补充使用工具和当时的版本。页面展示的是分享者的试用自述，不能据此认定已通过公司的技术审查，或适用于所有工具和版本。
 
-```bash
-git add skill-hub && git commit -m 'feat: skill 共享平台' && git push
+外部条目可以直接创建，不需要上传文件或生成版本。在详情页复制安装请求，发给支持 Skills 的 AI 工具，让它读取来源、确认能否安装，并示范怎样使用。具体安装方式由工具和原项目决定，不需要自己拼安装命令。内部上传仍按原有方式下载 ZIP，并提供安装说明。页面不会将复制请求记为安装成功，外部推荐也不累计内部 ZIP 下载数。
+
+更新内部 Skill 时，从它的详情页选择「上传新版本」。从分享入口上传会创建独立条目，同名文件也不会自动合并。外部推荐使用单独的来源标识去重，避免把不同作者的同名作品合并成一个条目。
+
+## 适用岗位
+
+上传文件和分享链接时都可以选择适用岗位，支持多选，也可以先留空。岗位描述这个 Skill 适合谁使用，与分享者的部门无关。适用范围较广时选「通用」，不用再逐个勾选具体岗位。
+
+首页按岗位筛选时，会同时显示该岗位和标为「通用」的 Skill。未标注岗位的历史条目保留在「全部岗位」中，补上岗位后才会进入对应筛选结果。岗位可以与用途分类、来源和关键词一起筛选。
+
+已有条目可以在详情页单独修改岗位，无需上传新版本。内部上传支持同事协作修改，外部条目的岗位由分享者修改。
+
+可选岗位包括内容创作、课程运营、销售、教学教研、人力行政、产品经理、设计师和剪辑。后续调整选项时，需要同步修改页面选项、预览数据校验及数据库约束。
+
+## 本地预览与检查
+
+在仓库根目录启动静态服务。
+
+```sh
+python3 -m http.server 8765 --bind 127.0.0.1 --directory skill-hub
 ```
 
-几分钟后访问 `https://internal.aurange.cn/skill-hub/` 即可。
+打开 `http://127.0.0.1:8765/?preview=1` 可使用示例数据查看页面，体验链接读取、分享发布、编辑、岗位筛选和安装请求。链接读取会访问公开 GitHub API；预览不连接真实 Supabase 数据，条目和文件保存在当前浏览器标签页的会话存储中，刷新后保留，关闭会话后清除。此次升级会给示例补上岗位，并保留会话中已添加的条目和文件。顶部的「重置示例」会恢复初始内容。预览上传单个文件限制为 5MB，正式上传仍为 50MB。
 
-## 给同事的使用说明（可直接转发）
+不带 `preview=1` 时，页面使用 `config.js` 配置的正式数据库。正式使用外部推荐和岗位筛选前，先完成上面的数据库升级。
 
-> 📍 平台地址：https://internal.aurange.cn/skill-hub/
->
-> **第一次用**：点「注册一个账号」，填姓名、部门、邮箱、密码即可。
->
-> **下载别人的 skill**：找到想要的 skill → 点下载 → 解压 →
-> 把整个文件夹放进电脑的 `~/.claude/skills/` 目录（访达按
-> Cmd+Shift+G 输入这个路径就能打开）。
->
-> **上传自己的 skill**：在电脑上找到自己的 skill 文件夹（在
-> `~/.claude/skills/` 里），右键 →「压缩」得到 zip，然后在平台点
-> 「+ 上传 Skill」传上去。名称和描述会自动识别，改进后再传一次
-> 会自动变成新版本。
+本地逻辑和上传回归测试使用 Node.js 内置测试工具。
 
-## 日常维护
+```sh
+node --test skill-hub/tests/*.test.js
+```
 
-- 免费额度：数据库 500MB + 文件存储 1GB，团队内部用绰绰有余
-- **休眠机制**：免费版连续 7 天无访问会自动休眠（页面会登录失败/连不上）。
-  仓库里的 GitHub Action（`.github/workflows/skillhub-keepalive.yml`）每天会
-  自动访问一次防止休眠；万一还是休眠了，到 supabase.com 后台打开项目，
-  点 **Restore project** 恢复即可，数据不会丢
-- 想看谁注册了、删除违规内容：Supabase 后台 → Table Editor 直接改表
-- 文件都存在 Storage → skills 桶里，可以直接在后台浏览
+## 来源去重的范围
+
+前端根据链接和具体 Skill 位置生成 `source_key`，数据库对外部条目的非空 `source_key` 建立唯一索引。同一来源同时被两个人提交时，也只能保存一份。名称和推荐理由不参与来源去重。
+
+自动读取会把 GitHub 和成功匹配的 skills.sh 链接统一到已验证的 GitHub 目录，发布前也会检查对应的旧 skills.sh 来源标识。手动填写时，GitHub 仓库如果包含多个 Skill，应填写具体目录。普通网页按规范化后的 URL 识别。数据库只核对提交的来源标识，不会访问外部网页，也不会识别仓库镜像或未解析的网址别名。规范化规则在页面代码中维护，修改规则时需要同时考虑已有条目的来源标识。
+
+条目创建后，分享者、来源类型和来源链接等身份信息固定。分享者可以修改外部条目的介绍、推荐理由和试用信息；需要换来源时，另建条目。内部上传继续允许同事协作更新介绍和添加版本，作者身份不能更换。
+
+## 数据与权限
+
+`skills.source_type` 取 `upload` 或 `external`，默认是 `upload`。外部推荐的链接、来源标识和推荐理由必填，链接只接受 HTTPS，并拒绝空白字符、反斜线及网址中的账号密码。
+
+`skills.roles` 使用 `text[]` 保存岗位，默认是空数组。数据库只接受选项表内的岗位，拒绝空值和多维数组。「通用」必须单独保存，不能与具体岗位混选。这个字段沿用条目的编辑权限。
+
+| 字段 | 外部条目的长度上限 |
+| --- | --- |
+| 标题、原作者、仓库标识、试用工具、试用版本 | 各 200 字符 |
+| 简介、推荐理由 | 各 4000 字符 |
+| 标签 | 500 字符 |
+| 来源 URL | 2048 字符 |
+| 来源标识 | 2048 字节 |
+| 具体目录 | 1024 字符 |
+| 安装说明 | 8000 字符 |
+
+所有登录用户可以浏览 Skill。外部条目只允许分享者更新和删除，内部条目允许协作更新。数据库触发器防止通过修改作者或来源类型绕过权限。`versions` 只接收内部上传条目的版本，外部推荐不能关联 ZIP 版本。
+
+日常可以在 Supabase 的 Table Editor 查看条目和注册资料，在 Storage 的 `skills` 桶查看上传文件。迁移没有导入示例推荐，也不会访问或安装任何外部 Skill。

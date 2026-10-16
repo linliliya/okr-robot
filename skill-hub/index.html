@@ -142,6 +142,145 @@
   }
   .setup-note h2 { margin-bottom: 8px; color: var(--warn); }
   .setup-note code { background: #fff; padding: 1px 6px; border-radius: 5px; }
+  [hidden] { display: none !important; }
+  button, input, select, textarea { font-family: inherit; }
+  button:disabled { opacity: .55; cursor: wait; }
+  a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+    outline: 3px solid #a5b4fc; outline-offset: 3px;
+  }
+  .hero { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 14px 0 28px; }
+  .eyebrow { color: var(--brand); font-size: 12px; font-weight: 600; letter-spacing: 1.5px; margin-bottom: 9px; }
+  .hero h1 { font-size: 28px; letter-spacing: -.5px; margin-bottom: 10px; }
+  .hero p { color: var(--muted); line-height: 1.8; font-size: 14px; }
+  .hero .actions { margin: 0; flex-shrink: 0; }
+  .source-tabs { display: flex; gap: 24px; border-bottom: 1px solid var(--line); margin-bottom: 22px; flex-wrap: wrap; }
+  .source-tab { border: 0; border-bottom: 3px solid transparent; background: transparent; color: var(--muted); font-size: 14px; padding: 0 0 12px; cursor: pointer; }
+  .source-tab.active { border-bottom-color: var(--brand); color: var(--brand); font-weight: 600; }
+  .source-tab span { font-size: 12px; margin-left: 5px; }
+  .list-status { font-size: 12px; color: var(--muted); margin: -3px 0 16px; }
+  .card { color: var(--ink); padding: 21px; gap: 12px; min-width: 0; }
+  .card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .source-badge { display: inline-block; border-radius: 5px; padding: 3px 8px; font-size: 11px; font-weight: 500; background: #f1f3f7; color: #526078; }
+  .source-badge.external { background: #edf7f3; color: #267056; }
+  .trial-status { color: var(--muted); font-size: 11px; }
+  .card h3 { font-size: 17px; line-height: 1.5; overflow-wrap: anywhere; }
+  .card .desc { min-height: 0; flex: none; }
+  .card-reason { font-size: 12px; line-height: 1.7; color: #4c5365; background: #f7f8fc; padding: 10px 12px; border-radius: 8px; }
+  .card-reason span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  #installation { scroll-margin-top: 80px; }
+  .card-bottom { border-top: 1px solid #f0f1f5; padding-top: 12px; margin-top: auto; display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+  .card-bottom .meta { font-size: 11px; }
+  .card-action { color: var(--brand); font-size: 12px; flex-shrink: 0; }
+  .role-filter { display: flex; align-items: flex-start; gap: 16px; padding: 16px; margin: 4px 0 18px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+  .filter-caption { color: var(--muted); font-size: 13px; flex-shrink: 0; padding: 8px 0; }
+  .role-filter .chips { margin: 0; }
+  .card-roles, .detail-roles { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .detail-roles { margin: 15px 0; }
+  .role-caption { color: var(--muted); font-size: 12px; margin-right: 4px; }
+  .role-tag { color: #59528d; background: #f0eef9; border-radius: 5px; padding: 3px 8px; font-size: 11px; line-height: 1.6; }
+  .role-unset { color: var(--muted); font-size: 12px; }
+  .text-button { border: 0; background: transparent; color: var(--brand); cursor: pointer; font-size: 12px; padding: 4px 6px; }
+  .role-field { border: 0; margin: 0 0 24px; min-width: 0; padding: 0; }
+  .role-field legend { font-size: 14px; margin-bottom: 12px; }
+  .role-field legend span { font-size: 12px; color: var(--muted); margin-left: 6px; }
+  .role-choices { display: flex; flex-wrap: wrap; gap: 8px; }
+  .role-choice { display: inline-flex; align-items: center; gap: 7px; padding: 8px 11px; border: 1px solid var(--line); border-radius: 8px; font-size: 12px; cursor: pointer; }
+  .role-choice:has(input:checked) { color: var(--brand); background: var(--brand-soft); border-color: #bcb5f7; }
+  .role-choice input { width: 14px; height: 14px; accent-color: var(--brand); margin: 0; }
+  .role-field .hint { margin-top: 10px; }
+  .roles-dialog { max-width: 600px !important; }
+  .roles-dialog .role-field { margin: 20px 0 0; }
+  .install-step { display: flex; gap: 12px; align-items: flex-start; }
+  .step-number { display: grid; place-items: center; width: 26px; height: 26px; flex-shrink: 0; border-radius: 8px; color: var(--brand); background: var(--brand-soft); font-size: 13px; font-weight: 600; }
+  .install-step h3 { font-size: 14px; margin: 2px 0 7px; }
+  .install-step p { color: var(--muted); font-size: 13px; }
+  .install-prompt { background: #f7f8ff; border: 1px solid #e2e5f5; border-radius: 10px; padding: 18px; margin: 16px 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.9; font-size: 13px; }
+  .next-step { margin-top: 24px; padding-top: 22px; border-top: 1px solid var(--line); }
+  .discover { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; padding: 22px 0 0; margin-top: 22px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+  .share-intro { max-width: 760px; margin: 12px auto 24px; }
+  .share-intro h1 { font-size: 26px; margin-bottom: 10px; }
+  .share-intro p { color: var(--muted); font-size: 14px; line-height: 1.8; }
+  .share-options { max-width: 760px; margin: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .share-option { padding: 26px; border: 1px solid var(--line); border-radius: 16px; background: #fff; color: var(--ink); }
+  .share-option:hover { border-color: #a5b4fc; }
+  .share-option h2 { font-size: 20px; margin: 18px 0 10px; }
+  .share-option p { font-size: 14px; line-height: 1.8; color: var(--muted); margin-bottom: 24px; }
+  .option-symbol { background: var(--brand-soft); color: var(--brand); display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 12px; font-size: 24px; }
+  .form-intro { color: var(--muted); line-height: 1.7; font-size: 14px; margin: -8px 0 24px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 18px; }
+  .field input:read-only { background: var(--bg); color: var(--muted); }
+  .field input, .field select, .field textarea { color: var(--ink); }
+  .field .hint { margin-top: 7px; }
+  .section-divider { border: 0; border-top: 1px solid var(--line); margin: 22px 0; }
+  .form-error { color: #b42318; font-size: 13px; line-height: 1.7; margin: 12px 0; }
+  .source-preview { border-radius: 9px; background: var(--brand-soft); color: #484391; padding: 12px 14px; margin: 0 0 18px; font-size: 12px; line-height: 1.8; overflow-wrap: anywhere; }
+  .source-preview a { text-decoration: underline; }
+  .import-input { display: flex; gap: 10px; }
+  .import-input input { min-width: 0; flex: 1; }
+  .import-input .btn { flex-shrink: 0; }
+  .import-status { color: var(--muted); font-size: 12px; line-height: 1.8; margin: -4px 0 16px; overflow-wrap: anywhere; }
+  .import-status:empty { display: none; }
+  .imported-preview { background: #f7f8ff; border: 1px solid #dfe3f6; border-radius: 12px; padding: 18px; margin: 0 0 16px; }
+  .imported-heading { display: flex; align-items: center; gap: 12px; }
+  .imported-heading > div { flex: 1; min-width: 0; }
+  .imported-heading strong { display: block; font-size: 16px; overflow-wrap: anywhere; }
+  .imported-heading p { color: var(--muted); font-size: 12px; margin-top: 5px; }
+  .imported-icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 10px; background: #e8eafe; color: var(--brand); font-size: 22px; flex-shrink: 0; }
+  .imported-description { margin: 14px 0 0; font-size: 13px; line-height: 1.8; color: #50576a; overflow-wrap: anywhere; max-height: 9em; overflow-y: auto; white-space: pre-wrap; }
+  .form-details { border: 1px solid var(--line); border-radius: 10px; margin-bottom: 22px; }
+  .form-details summary { padding: 14px 16px; cursor: pointer; font-size: 13px; font-weight: 500; }
+  .form-details summary span { font-weight: 400; font-size: 12px; color: var(--muted); margin-left: 8px; }
+  .form-details[open] summary { border-bottom: 1px solid var(--line); }
+  .details-content { padding: 20px 16px 0; }
+  .recommendation-field textarea { min-height: 96px; }
+  .skill-picker { padding: 16px; background: #f7f8ff; border-radius: 10px; }
+  .detail-layout { display: grid; grid-template-columns: minmax(0, 1fr) 310px; gap: 20px; align-items: start; }
+  .detail-main { min-width: 0; }
+  .detail-panel { border: 1px solid var(--line); border-radius: 14px; background: #fff; padding: 24px; margin-bottom: 18px; }
+  .detail-panel h2 { font-size: 16px; margin-bottom: 15px; }
+  .detail-panel p { font-size: 14px; line-height: 1.8; }
+  .prose { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .recommendation { font-size: 15px !important; }
+  .detail-head .meta { margin-bottom: 14px; }
+  .identity-list { display: grid; grid-template-columns: 72px minmax(0,1fr); gap: 12px; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+  .identity-list dt { color: var(--muted); }
+  .identity-list dd { min-width: 0; }
+  .install-command { padding: 15px; background: #f5f6fb; border: 1px solid #e8eaf3; border-radius: 9px; color: #373957; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; font-size: 12px; margin: 14px 0; }
+  .install-methods { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0; }
+  .install-note { font-size: 12px !important; color: var(--muted); margin-top: 12px; }
+  .preview-banner { background: #fff8e8; border-bottom: 1px solid #f4dfae; color: #805f1d; font-size: 12px; padding: 9px 20px; display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; }
+  .preview-banner button { border: none; background: transparent; color: #805f1d; text-decoration: underline; cursor: pointer; font-size: 12px; }
+  .notice { padding: 14px 16px; border: 1px solid #e2e5f5; background: #f7f8ff; border-radius: 10px; font-size: 13px; line-height: 1.8; margin-bottom: 18px; }
+  .confirm-dialog { border: 1px solid var(--line); border-radius: 16px; padding: 26px; max-width: 440px; width: calc(100% - 32px); margin: auto; color: var(--ink); }
+  .confirm-dialog::backdrop { background: rgba(20, 25, 45, .35); }
+  .confirm-dialog h2 { font-size: 18px; margin-bottom: 12px; }
+  .confirm-dialog p { font-size: 14px; line-height: 1.8; white-space: pre-wrap; }
+  .confirm-dialog .actions { justify-content: flex-end; margin-top: 22px; }
+  @media (max-width: 760px) {
+    .hero { align-items: flex-start; flex-direction: column; gap: 18px; }
+    .detail-layout { grid-template-columns: 1fr; }
+    .header-inner { gap: 10px; flex-wrap: wrap; }
+    .userchip { display: none; }
+    .grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); }
+  }
+  @media (max-width: 480px) {
+    main { padding: 20px 14px 44px; }
+    .share-options, .form-grid { grid-template-columns: 1fr; }
+    .panel, .detail-head, .detail-panel { padding: 20px; }
+    .hero h1 { font-size: 24px; }
+    .source-tabs { gap: 18px; }
+    .toolbar input[type=search] { min-width: 0; width: 100%; flex-basis: 100%; }
+    .header-inner { padding: 12px 14px; }
+    .btn.small { padding: 8px 10px; }
+    .field input, .field select, .field textarea, .toolbar input[type=search] { font-size: 16px; }
+    .import-input { flex-wrap: wrap; }
+    .import-input input { flex-basis: 100%; }
+    .import-input .btn { width: 100%; }
+    .form-details summary span { display: none; }
+    .role-filter { flex-direction: column; gap: 4px; padding: 12px; }
+    .role-choice { padding: 8px 9px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .card { transition: none; } .card:hover { transform: none; } }
 </style>
 </head>
 <body>
@@ -150,489 +289,17 @@
     <a class="logo" href="#/">Skill <span>市集</span></a>
     <div class="spacer"></div>
     <span id="nav-user" class="userchip"></span>
-    <a id="nav-upload" class="btn small" href="#/upload" style="display:none">+ 上传 Skill</a>
+    <a id="nav-upload" class="btn small" href="#/share" style="display:none">+ 分享 Skill</a>
     <button id="nav-logout" class="btn small ghost" style="display:none">退出</button>
   </div>
 </header>
-<div id="flash"></div>
-<main id="app"></main>
+<div id="preview-banner" class="preview-banner" hidden></div>
+<div id="flash" role="status" aria-live="polite"></div>
+<main id="app" aria-label="Skill 市集"></main>
 
-<script>
-const CFG = window.SKILLHUB_CONFIG || {};
-const CONFIGURED = CFG.SUPABASE_URL && !CFG.SUPABASE_URL.includes("YOUR-PROJECT");
-const sb = CONFIGURED ? supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY) : null;
-
-const CATEGORIES = ["文案生成", "数据处理", "课程制作", "招聘筛选", "资讯采集", "效率工具", "其他"];
-const DEPARTMENTS = ["内容", "运营", "交付", "产品", "其他"];
-
-const $app = document.getElementById("app");
-let me = null;          // 当前登录用户 { id, email, profile }
-let listState = { q: "", category: "", sort: "new" };
-let skillCache = [];
-
-// ---------- 小工具 ----------
-const esc = s => String(s ?? "").replace(/[&<>"']/g,
-  c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-
-function flash(msg, ms = 2600) {
-  const el = document.getElementById("flash");
-  el.textContent = msg; el.style.display = "block";
-  clearTimeout(el._t); el._t = setTimeout(() => el.style.display = "none", ms);
-}
-
-function fmtDate(iso) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-}
-
-// 从 frontmatter 里取字段值；支持多行写法（description: > 或 | 后接缩进续行）
-function fmValue(fm, key) {
-  const lines = fm.split(/\r?\n/);
-  const idx = lines.findIndex(l => l.startsWith(key + ":"));
-  if (idx === -1) return "";
-  let first = lines[idx].slice(key.length + 1).trim();
-  if (/^[>|][+-]?$/.test(first)) first = "";
-  const cont = [];
-  for (let i = idx + 1; i < lines.length; i++) {
-    if (/^\s+\S/.test(lines[i])) cont.push(lines[i].trim());
-    else break;
-  }
-  const parts = (first ? [first] : []).concat(cont);
-  return parts.join(" ").replace(/^['"]|['"]$/g, "").trim();
-}
-
-function slugify(name) {
-  return String(name).toLowerCase().trim()
-    .replace(/[^a-z0-9一-鿿-]+/g, "-").replace(/^-+|-+$/g, "") || "skill";
-}
-
-// ---------- 认证 ----------
-async function refreshUser() {
-  if (!sb) return;
-  const { data: { session } } = await sb.auth.getSession();
-  if (!session) { me = null; renderNav(); return; }
-  const { data: profile } = await sb.from("profiles")
-    .select("*").eq("id", session.user.id).maybeSingle();
-  me = { id: session.user.id, email: session.user.email, profile };
-  renderNav();
-}
-
-function renderNav() {
-  document.getElementById("nav-user").textContent =
-    me ? `${me.profile?.display_name || me.email} · ${me.profile?.department || ""}` : "";
-  document.getElementById("nav-upload").style.display = me ? "" : "none";
-  document.getElementById("nav-logout").style.display = me ? "" : "none";
-}
-
-document.getElementById("nav-logout").onclick = async () => {
-  await sb.auth.signOut(); me = null; renderNav(); location.hash = "#/login";
-};
-
-// ---------- 路由 ----------
-async function route() {
-  if (!CONFIGURED) return viewSetupNote();
-  await refreshUser();
-  const hash = location.hash || "#/";
-  if (!me && hash !== "#/register") return viewAuth(hash === "#/login" ? "login" : "login");
-  if (hash === "#/register") return viewAuth("register");
-  if (hash === "#/login") return viewAuth("login");
-  if (hash === "#/upload") return viewUpload();
-  const m = hash.match(/^#\/skill\/(.+)$/);
-  if (m) return viewDetail(decodeURIComponent(m[1]));
-  return viewList();
-}
-window.addEventListener("hashchange", route);
-
-// ---------- 视图：未配置提示 ----------
-function viewSetupNote() {
-  $app.innerHTML = `
-    <div class="setup-note">
-      <h2>⚙️ 平台还没连接数据库</h2>
-      <p>这个页面已经部署好了，但还差最后一步：按照仓库里 <code>skill-hub/SETUP.md</code>
-      的指引注册一个免费的 Supabase 项目（约 5 分钟），然后把项目地址和密钥填进
-      <code>skill-hub/config.js</code>，重新发布即可。</p>
-    </div>`;
-}
-
-// ---------- 视图：登录 / 注册 ----------
-function viewAuth(mode) {
-  const isLogin = mode === "login";
-  $app.innerHTML = `
-    <div class="panel">
-      <h2>${isLogin ? "登录" : "注册账号"}</h2>
-      <form id="auth-form">
-        ${isLogin ? "" : `
-        <div class="field"><label>姓名（同事们看到的名字，填大家熟悉的称呼就行）</label>
-          <input name="display_name" required maxlength="20" placeholder="例如：小王 / Lily"></div>
-        <div class="field"><label>部门</label>
-          <select name="department">${DEPARTMENTS.map(d => `<option>${d}</option>`).join("")}</select></div>`}
-        <div class="field"><label>邮箱</label>
-          <input name="email" type="email" required placeholder="you@example.com"></div>
-        <div class="field"><label>密码${isLogin ? "" : "（至少 6 位）"}</label>
-          <input name="password" type="password" required minlength="6"></div>
-        <button class="btn" style="width:100%">${isLogin ? "登录" : "注册并进入"}</button>
-      </form>
-      <div class="authswitch">
-        ${isLogin
-          ? `第一次来？<a href="#/register">注册一个账号</a>`
-          : `已有账号？<a href="#/login">直接登录</a>`}
-      </div>
-    </div>`;
-  document.getElementById("auth-form").onsubmit = async e => {
-    e.preventDefault();
-    const fd = new FormData(e.target);
-    const email = fd.get("email"), password = fd.get("password");
-    try {
-      if (isLogin) {
-        const { error } = await sb.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-      } else {
-        const { error } = await sb.auth.signUp({
-          email, password,
-          options: { data: {
-            display_name: fd.get("display_name"),
-            department: fd.get("department"),
-          } },
-        });
-        if (error) throw error;
-      }
-      location.hash = "#/"; route();
-    } catch (err) {
-      const msg = String(err.message || err);
-      if (msg.includes("Invalid login")) flash("邮箱或密码不对");
-      else if (msg.includes("already registered")) flash("这个邮箱已经注册过了，直接登录吧");
-      else if (msg.includes("confirm")) flash("提示管理员：需在 Supabase 后台关闭邮箱验证（见 SETUP.md 第 4 步）", 5000);
-      else flash("出错了：" + msg, 4000);
-    }
-  };
-}
-
-// ---------- 视图：列表 ----------
-async function viewList() {
-  $app.innerHTML = `<div class="empty">加载中…</div>`;
-  const { data, error } = await sb.from("skills")
-    .select("*, author:profiles(display_name, department)")
-    .order("updated_at", { ascending: false });
-  if (error) { $app.innerHTML = `<div class="empty">加载失败：${esc(error.message)}</div>`; return; }
-  skillCache = data || [];
-  renderList();
-}
-
-function renderList() {
-  const { q, category, sort } = listState;
-  let items = skillCache.filter(s => {
-    const hitQ = !q || (s.title + s.description + s.tags).toLowerCase().includes(q.toLowerCase());
-    const hitC = !category || s.category === category;
-    return hitQ && hitC;
-  });
-  if (sort === "hot") items = [...items].sort((a, b) => b.downloads - a.downloads);
-
-  $app.innerHTML = `
-    <div class="toolbar">
-      <input type="search" id="search" placeholder="搜索 skill 名称、描述、标签…" value="${esc(q)}">
-      <button class="chip ${sort === "new" ? "active" : ""}" data-sort="new">🕐 最新</button>
-      <button class="chip ${sort === "hot" ? "active" : ""}" data-sort="hot">🔥 最热</button>
-    </div>
-    <div class="chips">
-      <button class="chip ${!category ? "active" : ""}" data-cat="">全部</button>
-      ${CATEGORIES.map(c =>
-        `<button class="chip ${category === c ? "active" : ""}" data-cat="${c}">${c}</button>`).join("")}
-    </div>
-    ${items.length ? `<div class="grid">${items.map(cardHTML).join("")}</div>`
-      : `<div class="empty">还没有匹配的 skill<br>点右上角「+ 上传 Skill」发布第一个吧 🚀</div>`}`;
-
-  document.getElementById("search").oninput = e => {
-    listState.q = e.target.value; renderList();
-    document.getElementById("search").focus();
-    const inp = document.getElementById("search");
-    inp.setSelectionRange(inp.value.length, inp.value.length);
-  };
-  $app.querySelectorAll("[data-sort]").forEach(b =>
-    b.onclick = () => { listState.sort = b.dataset.sort; renderList(); });
-  $app.querySelectorAll("[data-cat]").forEach(b =>
-    b.onclick = () => { listState.category = b.dataset.cat; renderList(); });
-  $app.querySelectorAll(".card").forEach(c =>
-    c.onclick = () => location.hash = "#/skill/" + encodeURIComponent(c.dataset.slug));
-}
-
-function cardHTML(s) {
-  const tags = s.tags ? s.tags.split(/[,，\s]+/).filter(Boolean) : [];
-  return `
-    <div class="card" data-slug="${esc(s.slug)}">
-      <h3>${esc(s.title)}</h3>
-      <div class="desc">${esc(s.description) || "（暂无描述）"}</div>
-      <div class="meta">
-        <span class="tag">${esc(s.category)}</span>
-        ${tags.slice(0, 3).map(t => `<span class="tag">${esc(t)}</span>`).join("")}
-      </div>
-      <div class="meta">
-        <span>👤 ${esc(s.author?.display_name || "?")} · ${esc(s.author?.department || "")}</span>
-        <span>⬇️ ${s.downloads}</span>
-        <span>${fmtDate(s.updated_at)}</span>
-      </div>
-    </div>`;
-}
-
-// ---------- 视图：详情 ----------
-async function viewDetail(slug) {
-  $app.innerHTML = `<div class="empty">加载中…</div>`;
-  const { data: skill } = await sb.from("skills")
-    .select("*, author:profiles(display_name, department)").eq("slug", slug).maybeSingle();
-  if (!skill) { $app.innerHTML = `<div class="empty">没找到这个 skill</div>`; return; }
-  const { data: versions } = await sb.from("versions")
-    .select("*, uploader:profiles(display_name)")
-    .eq("skill_id", skill.id).order("version", { ascending: false });
-  const latest = versions?.[0];
-  const docBody = (latest?.skill_md || "").replace(/^---\s*\n[\s\S]*?\n---\s*\n?/, "");
-  const docHTML = docBody ? DOMPurify.sanitize(marked.parse(docBody)) : "";
-  const tags = skill.tags ? skill.tags.split(/[,，\s]+/).filter(Boolean) : [];
-
-  $app.innerHTML = `
-    <a class="backlink" href="#/">← 返回列表</a>
-    <div class="detail-head">
-      <h1>${esc(skill.title)}</h1>
-      <div class="meta">
-        <span class="tag">${esc(skill.category)}</span>
-        ${tags.map(t => `<span class="tag">${esc(t)}</span>`).join("")}
-        <span>👤 ${esc(skill.author?.display_name || "?")} · ${esc(skill.author?.department || "")}</span>
-        <span>⬇️ 已下载 ${skill.downloads} 次</span>
-        <span>更新于 ${fmtDate(skill.updated_at)}</span>
-      </div>
-      <div class="desc">${esc(skill.description)}</div>
-      <div class="actions">
-        ${latest ? `<button class="btn" id="dl-btn">⬇️ 下载最新版 v${latest.version}</button>` : ""}
-        <a class="btn ghost" href="#/upload">上传新版本</a>
-      </div>
-      <div class="install-guides">
-        <div class="ig-title">📦 下载后怎么用？按你用的工具选一个：</div>
-        <details open>
-          <summary>Claude Code（终端 / 桌面版）</summary>
-          <div class="g-body">
-            解压 zip，把<b>整个文件夹</b>放进 <code>~/.claude/skills/</code> 目录
-            （访达按 <code>Cmd+Shift+G</code> 输入这个路径即可打开；Windows 在
-            <code>C:\用户\你的用户名\.claude\skills\</code>）。<br>
-            放好后新开一个对话，说出 skill 描述里的触发词就会自动生效，
-            也可以直接说「用 xx skill 帮我…」。
-          </div>
-        </details>
-        <details>
-          <summary>Claude 网页版 / App（claude.ai）</summary>
-          <div class="g-body">
-            不用解压。打开 claude.ai → 设置（Settings）→ 功能（Capabilities）→
-            <b>Skills</b> → 上传这个 zip 文件即可（需要先把设置里的
-            「Code execution / 代码执行」开关打开，skill 依赖它运行）。<br>
-            上传后可在列表里开关这个 skill，对话中提到相关需求会自动触发。
-            skill 只对自己的账号生效，同事需要各自上传。
-          </div>
-        </details>
-        <details>
-          <summary>Codex（OpenAI 编程助手）</summary>
-          <div class="g-body">
-            Codex 原生支持 skill，格式和 Claude 通用，同一个 zip 直接用：<br>
-            解压后把<b>整个文件夹</b>放进 <code>~/.agents/skills/</code> 目录
-            （没有就新建一个）。对话里输入 <code>$技能名</code> 显式调用，
-            输入 <code>/skills</code> 可查看已安装的 skill，匹配需求时也会自动触发。<br>
-            提示：旧版 Codex 用的是 <code>~/.codex/skills/</code>，如果不生效，
-            先升级 Codex 到最新版，或把文件夹放到这个旧路径试试。
-          </div>
-        </details>
-        <details>
-          <summary>ChatGPT / 豆包 / 其他 AI 聊天助手</summary>
-          <div class="g-body">
-            新版 ChatGPT 桌面版已支持 skill（对话里输入 <code>@</code> 查看）。
-            其他聊天助手用通用方法：解压后打开里面的 <code>SKILL.md</code>
-            （右键 → 打开方式 → 文本编辑），把全文复制，作为对话的<b>第一条消息</b>发给
-            AI，然后再说你的需求。<br>
-            注意：如果这个 skill 带了脚本文件（比如 scripts 文件夹），纯聊天助手无法运行脚本，
-            只能用到里面的方法和模板部分。
-          </div>
-        </details>
-      </div>
-    </div>
-    ${docHTML ? `<div class="doc">${docHTML}</div>` : ""}
-    <div class="vlist">
-      ${(versions || []).map(v => `
-        <div class="vitem">
-          <span class="vnum">v${v.version}</span>
-          <span class="vlog">${esc(v.changelog) || "（没写更新说明）"}</span>
-          <span class="vmeta">${esc(v.uploader?.display_name || "?")} · ${fmtDate(v.uploaded_at)}</span>
-          <button class="btn small ghost" data-ver="${v.version}" data-path="${esc(v.file_path)}">下载</button>
-          ${me && me.id === v.uploader_id
-            ? `<button class="btn small danger" data-del="${v.id}" data-delver="${v.version}" data-delpath="${esc(v.file_path)}">删除</button>`
-            : ""}
-        </div>`).join("")}
-    </div>`;
-
-  async function download(path, version) {
-    flash("正在下载…");
-    const { data, error } = await sb.storage.from("skills").download(path);
-    if (error) { flash("下载失败：" + error.message, 4000); return; }
-    const url = URL.createObjectURL(data);
-    const a = document.createElement("a");
-    a.href = url; a.download = `${skill.slug}-v${version}.zip`; a.click();
-    URL.revokeObjectURL(url);
-    await sb.rpc("increment_downloads", { p_skill_id: skill.id });
-  }
-  const dlBtn = document.getElementById("dl-btn");
-  if (dlBtn) dlBtn.onclick = () => download(latest.file_path, latest.version);
-  $app.querySelectorAll("[data-ver]").forEach(b =>
-    b.onclick = () => download(b.dataset.path, b.dataset.ver));
-
-  $app.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => {
-    const isLast = versions.length === 1;
-    if (!confirm(`确定删除 v${b.dataset.delver} 吗？删除后无法恢复。${isLast ? "\n这是唯一的版本，删除后整个 skill 会一并移除。" : ""}`)) return;
-    const { data: deleted, error } = await sb.from("versions")
-      .delete().eq("id", b.dataset.del).select("id");
-    if (error || !deleted?.length) {
-      flash("删除失败：" + (error?.message || "没有删除权限（管理员需在 Supabase 运行 update-delete-permission.sql）"), 6000);
-      return;
-    }
-    await sb.storage.from("skills").remove([b.dataset.delpath]);
-    if (isLast) {
-      await sb.from("skills").delete().eq("id", skill.id);
-      flash("已删除，这是最后一个版本，skill 已一并移除");
-      location.hash = "#/";
-    } else {
-      flash("版本已删除");
-      viewDetail(slug);
-    }
-  });
-}
-
-// ---------- 视图：上传 ----------
-function viewUpload() {
-  $app.innerHTML = `
-    <div class="panel wide">
-      <h2>上传 Skill</h2>
-      <form id="up-form">
-        <div class="field">
-          <div class="dropzone" id="dz">
-            📦 点击选择（或拖入）skill 的 <b>.zip 压缩包</b><br>
-            <span class="hint">在电脑上找到 skill 文件夹，右键 →「压缩」就能得到 zip</span>
-            <div id="parse-result"></div>
-          </div>
-          <input type="file" id="file" accept=".zip" hidden>
-        </div>
-        <div class="field"><label>Skill 名称</label>
-          <input name="title" id="f-title" required placeholder="上传 zip 后自动识别，也可手动修改"></div>
-        <div class="field"><label>一句话描述（这个 skill 是干嘛的、什么时候用）</label>
-          <textarea name="description" id="f-desc" placeholder="上传 zip 后自动识别 SKILL.md 里的描述"></textarea></div>
-        <div class="field"><label>分类</label>
-          <select name="category">${CATEGORIES.map(c => `<option>${c}</option>`).join("")}</select></div>
-        <div class="field"><label>标签（用逗号分隔，方便同事搜索）</label>
-          <input name="tags" placeholder="例如：朋友圈, 文案, 小红书"></div>
-        <div class="field"><label>更新说明（这一版改了什么；首次上传可不填）</label>
-          <input name="changelog" placeholder="例如：优化了触发词，修复了日期格式问题"></div>
-        <button class="btn" style="width:100%" id="up-btn">发布</button>
-        <div class="hint" style="margin-top:10px">同名 skill 再次上传会自动记为新版本，旧版本仍可下载。单个文件最大 50MB。</div>
-      </form>
-    </div>`;
-
-  const fileInput = document.getElementById("file");
-  const dz = document.getElementById("dz");
-  let picked = null, parsedMd = "";
-
-  dz.onclick = () => fileInput.click();
-  dz.ondragover = e => { e.preventDefault(); dz.classList.add("drag"); };
-  dz.ondragleave = () => dz.classList.remove("drag");
-  dz.ondrop = e => {
-    e.preventDefault(); dz.classList.remove("drag");
-    if (e.dataTransfer.files[0]) { fileInput.files = e.dataTransfer.files; handleFile(); }
-  };
-  fileInput.onchange = handleFile;
-
-  async function handleFile() {
-    picked = fileInput.files[0];
-    if (!picked) return;
-    if (!picked.name.endsWith(".zip")) { flash("请选择 .zip 压缩包"); picked = null; return; }
-    const result = document.getElementById("parse-result");
-    result.innerHTML = `<div class="parse-ok">已选择：${esc(picked.name)}（${(picked.size/1024/1024).toFixed(1)}MB）</div>`;
-    try {
-      const zip = await JSZip.loadAsync(picked);
-      const names = Object.keys(zip.files)
-        .filter(n => !n.includes("__MACOSX") && !zip.files[n].dir);
-      const cands = names.filter(n => n.toLowerCase().endsWith("skill.md"));
-      if (!cands.length) {
-        const shown = names.slice(0, 6).map(esc).join("、");
-        result.innerHTML += `<div class="hint">⚠️ 压缩包里没找到 SKILL.md，仍可上传，请在下方手动填写名称和描述。<br>
-          包内文件：${shown || "（空）"}${names.length > 6 ? ` 等 ${names.length} 个` : ""}</div>`;
-        parsedMd = ""; return;
-      }
-      const path = cands.sort((a, b) => a.split("/").length - b.split("/").length)[0];
-      parsedMd = await zip.files[path].async("string");
-      const fm = parsedMd.match(/^---\s*\n([\s\S]*?)\n---/);
-      let name = "", desc = "";
-      if (fm) {
-        name = fmValue(fm[1], "name");
-        desc = fmValue(fm[1], "description");
-      }
-      if (!name) name = path.split("/").length >= 2 ? path.split("/").slice(-2)[0] : picked.name.replace(".zip", "");
-      if (name && !document.getElementById("f-title").value) document.getElementById("f-title").value = name;
-      if (desc && !document.getElementById("f-desc").value) document.getElementById("f-desc").value = desc;
-      result.innerHTML += `<div class="parse-ok">✅ 已自动识别 SKILL.md${name ? `：${esc(name)}` : ""}</div>`;
-    } catch (err) {
-      result.innerHTML += `<div class="hint">⚠️ 解析压缩包失败，请确认是有效的 zip 文件</div>`;
-    }
-  }
-
-  document.getElementById("up-form").onsubmit = async e => {
-    e.preventDefault();
-    if (!picked) { flash("请先选择 zip 压缩包"); return; }
-    const btn = document.getElementById("up-btn");
-    btn.disabled = true; btn.textContent = "发布中…";
-    try {
-      const fd = new FormData(e.target);
-      const title = fd.get("title").trim();
-      const slug = slugify(title);
-
-      const { data: existing } = await sb.from("skills")
-        .select("id, author_id").eq("slug", slug).maybeSingle();
-
-      let skillId, version = 1;
-      if (existing) {
-        skillId = existing.id;
-        const { data: lastVer } = await sb.from("versions")
-          .select("version").eq("skill_id", skillId)
-          .order("version", { ascending: false }).limit(1).maybeSingle();
-        version = (lastVer?.version || 0) + 1;
-      }
-
-      const filePath = `${slug}/v${version}-${Date.now()}.zip`;
-      const { error: upErr } = await sb.storage.from("skills").upload(filePath, picked);
-      if (upErr) throw upErr;
-
-      const meta = {
-        title, description: fd.get("description").trim(),
-        category: fd.get("category"), tags: fd.get("tags").trim(),
-        updated_at: new Date().toISOString(),
-      };
-      if (existing) {
-        const { error } = await sb.from("skills").update(meta).eq("id", skillId);
-        if (error) throw error;
-      } else {
-        const { data, error } = await sb.from("skills")
-          .insert({ ...meta, slug, author_id: me.id }).select("id").single();
-        if (error) throw error;
-        skillId = data.id;
-      }
-      const { error: verErr } = await sb.from("versions").insert({
-        skill_id: skillId, version, changelog: fd.get("changelog").trim(),
-        file_path: filePath, skill_md: parsedMd, uploader_id: me.id,
-      });
-      if (verErr) throw verErr;
-
-      flash(`发布成功！当前为 v${version} 🎉`);
-      location.hash = "#/skill/" + encodeURIComponent(slug);
-    } catch (err) {
-      flash("发布失败：" + (err.message || err), 5000);
-      btn.disabled = false; btn.textContent = "发布";
-    }
-  };
-}
-
-// ---------- 启动 ----------
-route();
-</script>
+<script src="shared.js"></script>
+<script src="importer.js"></script>
+<script src="preview.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
