@@ -9,6 +9,40 @@
   const REPOSITORY = /^[a-z0-9][a-z0-9._-]*\/[a-z0-9._-]+$/i;
   const SLUG = /^[a-z0-9][a-z0-9._-]*$/i;
   const ROLE_OPTIONS = Object.freeze(["通用", "内容创作", "课程运营", "销售", "教学教研", "人力行政", "产品经理", "设计师", "剪辑"]);
+  const KNOWN_DISPLAY_TITLES = Object.freeze({
+    "de-ai-copy": "去AI味写作",
+    "ai-moments": "生成 AI 资讯朋友圈",
+    "book-insights": "生成读书感悟朋友圈",
+    "python-crawler-success": "生成 Python 爬虫训练营成功案例朋友圈"
+  });
+
+  function displayTitle(value) {
+    if (typeof value !== "string" || CONTROL.test(value) || /[\u2028\u2029]/.test(value)) return "";
+    const title = value.trim();
+    return [...title].length <= 80 ? title : "";
+  }
+
+  function knownDisplayTitle(title) {
+    return Object.hasOwn(KNOWN_DISPLAY_TITLES, title) ? KNOWN_DISPLAY_TITLES[title] : "";
+  }
+
+  function getDisplayTitle(skill) {
+    const title = typeof skill?.title === "string" ? skill.title.trim() : "";
+    return displayTitle(skill?.display_title) || knownDisplayTitle(title) || title;
+  }
+
+  function suggestDisplayTitle(skill) {
+    const title = typeof skill?.title === "string" ? skill.title.trim() : "";
+    const chineseTitle = displayTitle(title);
+    if (/[\u3400-\u9fff]/.test(chineseTitle)) return chineseTitle;
+    const known = knownDisplayTitle(title);
+    if (known) return known;
+    // Suggest only a complete sentence already present in the description.
+    // Longer text and English-only descriptions need a title from the sharer.
+    const description = typeof skill?.description === "string" ? skill.description.trim() : "";
+    const firstSentence = displayTitle(description.split(/[。！？!?；;\r\n]|\.(?=\s|$)/, 1)[0]);
+    return /[\u3400-\u9fff]/.test(firstSentence) ? firstSentence : "";
+  }
 
   function normalizeRoles(raw) {
     if (!Array.isArray(raw)) return [];
@@ -183,7 +217,7 @@
       if (source && source !== "all" && sourceType(skill) !== source) return false;
       const roles = normalizeRoles(skill.roles);
       if (role && (!ROLE_OPTIONS.includes(role) || (!roles.includes(role) && !roles.includes("通用")))) return false;
-      const searchable = [skill.title, skill.description, skill.tags, skill.recommendation,
+      const searchable = [getDisplayTitle(skill), skill.title, skill.description, skill.tags, skill.recommendation,
         skill.recommendation_reason, skill.recommendation_note, skill.original_author, skill.originalAuthor,
         skill.author?.display_name, skill.source_url, skill.source_path, roles.join(" ")].filter(Boolean).join(" ").toLowerCase();
       return !query || searchable.includes(query);
@@ -194,5 +228,5 @@
     return filtered.map(({ skill }) => skill);
   }
 
-  return { ROLE_OPTIONS, normalizeRoles, normalizeSource, buildInstallPrompt, safeUrl, sourceType, filterSkills };
+  return { ROLE_OPTIONS, getDisplayTitle, suggestDisplayTitle, normalizeRoles, normalizeSource, buildInstallPrompt, safeUrl, sourceType, filterSkills };
 });

@@ -21,6 +21,11 @@ function file(name, markdown, extra = {}) {
   return { name, size: 128, markdown, ...extra };
 }
 
+function decode(value) {
+  return String(value || "").replace(/&(?:amp|lt|gt|quot|#39);/g,
+    entity => ({ "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"', "&#39;": "'" }[entity]));
+}
+
 async function harness(options = {}) {
   const nodes = new Map();
   let roleInputs = [];
@@ -43,6 +48,13 @@ async function harness(options = {}) {
               name: "roles", value: attrs.match(/\bvalue="([^"]*)"/)?.[1] || "",
               checked: /\bchecked(?:\s|$)/.test(attrs), disabled: false,
             }));
+            for (const match of html.matchAll(/<(input|textarea)\b([^>]*\bid="([^"]+)"[^>]*)>/gi)) {
+              const [, tag, attrs, fieldId] = match;
+              const content = tag.toLowerCase() === "textarea"
+                ? html.slice(match.index + match[0].length).split("</textarea>")[0]
+                : attrs.match(/\bvalue="([^"]*)"/)?.[1];
+              element(fieldId).value = decode(content);
+            }
           },
         });
       }
@@ -51,7 +63,7 @@ async function harness(options = {}) {
     return nodes.get(id);
   }
   const original = options.existing ? {
-    id: 7, slug: "existing-skill", title: "Existing title", description: "Existing description",
+    id: 7, slug: "existing-skill", title: "Existing title", display_title: "生成课程提纲", description: "Existing description",
     author_id: "original-author", source_type: "upload", tags: "", category: "其他",
     roles: options.existingRoles || [],
   } : null;
@@ -111,14 +123,17 @@ async function harness(options = {}) {
       },
     },
   };
-  const fields = { title: "New title", description: "New description", category: "其他", tags: "", changelog: "New release" };
+  const fields = { title: "New title", display_title: "生成课程提纲", description: "New description", category: "其他", tags: "", changelog: "New release", ...options.fields };
   const context = vm.createContext({
     window: { SKILLHUB_PREVIEW_CLIENT: sb, SkillHub: require("../shared.js"), addEventListener() {} },
     document: { getElementById: element },
     location: { hash: "#/upload" }, navigator: {}, crypto: { randomUUID },
     setTimeout: () => 0, clearTimeout() {},
     FormData: class {
-      get(key) { return fields[key] || ""; }
+      get(key) {
+        const fieldId = { title: "f-title", display_title: "f-display-title", description: "f-desc" }[key];
+        return options.useDOMFields && fieldId ? element(fieldId).value : fields[key] || "";
+      }
       getAll(key) { return key === "roles" ? roleInputs.filter(input => input.checked && !input.disabled).map(input => input.value) : []; }
     },
     JSZip: {
@@ -133,7 +148,12 @@ async function harness(options = {}) {
   vm.runInContext(`${appSource}\nme = { id: "demo-user" };`, context, { filename: "app.js" });
   await vm.runInContext(`viewUpload(${JSON.stringify(original?.slug || "")})`, context);
   return {
-    db, files, calls, original, element,
+    db, files, calls, original, element, fields,
+    input(id, value) {
+      const node = element(id);
+      node.value = value;
+      return node.oninput?.({ target: node });
+    },
     selectedRoles() { return roleInputs.filter(input => input.checked).map(input => input.value); },
     chooseRole(role, checked = true) {
       const input = roleInputs.find(input => input.value === role);
@@ -207,6 +227,7 @@ test("a failed new version keeps the existing Skill, metadata, and older file", 
   assert.equal(app.db.skills.length, 1);
   assert.equal(app.db.skills[0].id, app.original.id);
   assert.equal(app.db.skills[0].title, app.original.title);
+  assert.equal(app.db.skills[0].display_title, app.original.display_title);
   assert.equal(app.db.skills[0].description, app.original.description);
   assert.equal(app.db.versions.length, 1);
   assert.equal(app.files.size, 1);
@@ -247,4 +268,71 @@ test("uploading a new version retains the existing Skill's roles", async () => {
   await app.submit();
   assert.equal(app.db.versions.length, 2);
   assert.deepEqual(app.db.skills[0].roles, roles);
+});
+
+test("uploading preserves the original name separately from the function title", async () => {
+  const app = await harness({ fields: { title: "de-ai-copy", display_title: "去AI味写作" } });
+  await app.choose(file("de-ai-copy.zip", "---\nname: de-ai-copy\n---\nRewrite a draft."));
+  await app.submit();
+  assert.equal(app.db.skills[0].title, "de-ai-copy");
+  assert.equal(app.db.skills[0].display_title, "去AI味写作");
+  assert.match(app.db.skills[0].slug, /^de-ai-copy-/);
+  assert.match(app.db.versions[0].skill_md, /name: de-ai-copy/);
+});
+
+test("an upload with no function title waits for the user to supply one before storing files", async () => {
+  const app = await harness({ fields: { display_title: "   " } });
+  await app.choose(file("new.zip", "NEW DOCUMENT"));
+  await app.submit();
+  assert.equal(app.db.skills.length, 0);
+  assert.equal(app.calls.some(call => call.operation === "upload"), false);
+  assert.match(app.element("flash").textContent, /功能标题/);
+  assert.equal(app.element("up-btn").disabled, false);
+  app.fields.display_title = "生成课程提纲";
+  await app.submit();
+  assert.equal(app.db.skills[0].display_title, "生成课程提纲");
+});
+
+test("replacing a ZIP refreshes automatically read names, function titles, and descriptions", async () => {
+  const app = await harness({ useDOMFields: true });
+  await app.choose(file("de-ai-copy.zip", "---\nname: de-ai-copy\ndescription: 将已有文稿改得更自然。\n---\nRewrite a draft."));
+  assert.equal(app.element("f-title").value, "de-ai-copy");
+  assert.equal(app.element("f-display-title").value, "去AI味写作");
+  assert.equal(app.element("f-desc").value, "将已有文稿改得更自然。");
+  const nextMarkdown = "---\nname: book-insights\ndescription: 根据书籍和思考生成朋友圈文案。\n---\nWrite a book reflection.";
+  await app.choose(file("book-insights.zip", nextMarkdown));
+  assert.equal(app.element("f-title").value, "book-insights");
+  assert.equal(app.element("f-display-title").value, "生成读书感悟朋友圈");
+  assert.equal(app.element("f-desc").value, "根据书籍和思考生成朋友圈文案。");
+  await app.submit();
+  assert.equal(app.db.skills[0].title, "book-insights");
+  assert.equal(app.db.skills[0].display_title, "生成读书感悟朋友圈");
+  assert.equal(app.db.versions[0].skill_md, nextMarkdown);
+});
+
+test("replacing a ZIP preserves a function title the user has manually edited", async () => {
+  const app = await harness({ useDOMFields: true });
+  await app.choose(file("de-ai-copy.zip", "---\nname: de-ai-copy\ndescription: 将已有文稿改得更自然。\n---\nRewrite a draft."));
+  app.input("f-display-title", "把读书笔记改成自然的朋友圈文案");
+  await app.choose(file("book-insights.zip", "---\nname: book-insights\ndescription: 根据书籍和思考生成朋友圈文案。\n---\nWrite a book reflection."));
+  assert.equal(app.element("f-title").value, "book-insights");
+  assert.equal(app.element("f-display-title").value, "把读书笔记改成自然的朋友圈文案");
+  assert.equal(app.element("f-desc").value, "根据书籍和思考生成朋友圈文案。");
+  await app.submit();
+  assert.equal(app.db.skills[0].display_title, "把读书笔记改成自然的朋友圈文案");
+});
+
+test("uploading a replacement version keeps the existing original name and function title", async () => {
+  const app = await harness({ existing: true, useDOMFields: true });
+  assert.equal(app.element("f-title").value, app.original.title);
+  assert.equal(app.element("f-display-title").value, app.original.display_title);
+  await app.choose(file("de-ai-copy.zip", "---\nname: de-ai-copy\ndescription: 将已有文稿改得更自然。\n---\nRewrite a draft."));
+  await app.choose(file("book-insights.zip", "---\nname: book-insights\ndescription: 根据书籍和思考生成朋友圈文案。\n---\nWrite a book reflection."));
+  assert.equal(app.element("f-title").value, app.original.title);
+  assert.equal(app.element("f-display-title").value, app.original.display_title);
+  assert.equal(app.element("f-desc").value, app.original.description);
+  await app.submit();
+  assert.equal(app.db.skills[0].title, app.original.title);
+  assert.equal(app.db.skills[0].display_title, app.original.display_title);
+  assert.equal(app.db.versions.length, 2);
 });

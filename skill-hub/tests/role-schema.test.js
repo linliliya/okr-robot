@@ -28,7 +28,7 @@ function preview(saved) {
 test("fresh preview supplies role examples and unlabelled new skills default to an empty list", async () => {
   const app = preview();
   const initial = app.saved();
-  assert.equal(initial.schema, 3);
+  assert.equal(initial.schema, 4);
   assert.deepEqual(initial.skills.find(s => s.slug === "course-outline-example").roles, ["教学教研"]);
   assert.deepEqual(initial.skills.find(s => s.slug === "anthropic-pdf").roles, ["通用"]);
   const inserted = await app.client.from("skills").insert({ slug: "untagged", title: "Untitled", author_id: "demo-user" }).select().single();
@@ -46,11 +46,11 @@ test("preview role upgrade preserves user entries, seed edits, files, and explic
   original.files["my-skill.zip"] = { base64: "YWJj", type: "application/zip" };
   original.nextId = 101;
   const migrated = preview(original).saved();
-  assert.equal(migrated.schema, 3);
+  assert.equal(migrated.schema, 4);
   assert.equal(migrated.skills[0].title, original.skills[0].title);
   assert.deepEqual(migrated.skills[0].roles, ["设计师", "产品经理"]);
   assert.deepEqual(migrated.skills[1].roles, ["剪辑"]);
-  assert.deepEqual(migrated.skills.find(s => s.id === 100), { ...original.skills[4], roles: [] });
+  assert.deepEqual(migrated.skills.find(s => s.id === 100), { ...original.skills[4], roles: [], display_title: "" });
   assert.deepEqual(migrated.files, original.files);
   assert.deepEqual(migrated.versions, original.versions);
   assert.equal(migrated.nextId, 101);
@@ -76,7 +76,7 @@ test("existing role selections migrate without losing skills or files", () => {
   original.skills[1].roles = ["财务", "客户服务"];
   original.files["kept.zip"] = { base64: "YWJj", type: "application/zip" };
   const migrated = preview(original).saved();
-  assert.equal(migrated.schema, 3);
+  assert.equal(migrated.schema, 4);
   assert.deepEqual(migrated.skills[0].roles, ["课程运营", "设计师"]);
   assert.deepEqual(migrated.skills[1].roles, []);
   assert.deepEqual(migrated.skills[0], { ...original.skills[0], roles: ["课程运营", "设计师"] });

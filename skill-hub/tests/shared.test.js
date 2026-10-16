@@ -2,7 +2,58 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const vm = require("node:vm");
-const { ROLE_OPTIONS, normalizeRoles, normalizeSource, buildInstallPrompt, safeUrl, sourceType, filterSkills } = require("../shared.js");
+const { ROLE_OPTIONS, getDisplayTitle, suggestDisplayTitle, normalizeRoles, normalizeSource, buildInstallPrompt, safeUrl, sourceType, filterSkills } = require("../shared.js");
+
+test("display titles prefer saved functions and otherwise preserve exact known names or the original title", () => {
+  assert.equal(getDisplayTitle({ title: "de-ai-copy", display_title: "  修改文章里的 AI 腔  " }), "修改文章里的 AI 腔");
+  for (const [title, expected] of [
+    ["de-ai-copy", "去AI味写作"],
+    ["ai-moments", "生成 AI 资讯朋友圈"],
+    ["book-insights", "生成读书感悟朋友圈"],
+    ["python-crawler-success", "生成 Python 爬虫训练营成功案例朋友圈"]
+  ]) {
+    assert.equal(getDisplayTitle({ title }), expected);
+    assert.equal(getDisplayTitle({ title, display_title: "  " }), expected);
+  }
+  for (const title of ["other-ai-moments", "AI-MOMENTS", "__proto__", "constructor", "unknown-skill"]) {
+    assert.equal(getDisplayTitle({ title, description: "不能据此猜测现有 Skill 的功能" }), title);
+  }
+  assert.equal(getDisplayTitle({ title: "中文原名" }), "中文原名");
+  assert.equal(getDisplayTitle(null), "");
+  assert.equal(getDisplayTitle({ title: 42 }), "");
+});
+
+test("invalid saved display titles fall back without truncation and use Unicode character limits", () => {
+  for (const display_title of [null, 12, {}, "新标题\n下一行", "新标题\u0000", "新标题\u0085", "新标题\u2028", "新标题\u2029", "字".repeat(81)]) {
+    assert.equal(getDisplayTitle({ title: "de-ai-copy", display_title }), "去AI味写作");
+  }
+  const title = "📝".repeat(80);
+  assert.equal(getDisplayTitle({ title: "writer", display_title: title }), title);
+});
+
+test("display title suggestions use existing Chinese text or exact mappings and never invent or truncate", () => {
+  assert.equal(suggestDisplayTitle({ title: "中文标题", description: "别的说明" }), "中文标题");
+  assert.equal(suggestDisplayTitle({ title: "book-insights", description: "别的说明" }), "生成读书感悟朋友圈");
+  assert.equal(suggestDisplayTitle({ title: "unknown", description: "整理客户需求，准备销售文案。再生成跟进消息。" }), "整理客户需求，准备销售文案");
+  assert.equal(suggestDisplayTitle({ title: "unknown", description: "整理客户需求\n准备销售文案" }), "整理客户需求");
+  assert.equal(suggestDisplayTitle({ title: "unknown", description: "使用 Python 3.12 整理数据. More details." }), "使用 Python 3.12 整理数据");
+  for (const description of ["An English description", "", "字".repeat(81), "字".repeat(81) + "。下一句很短。", "First sentence. 后面的中文不能代替第一句", "含有\u0000无效字符"]) {
+    assert.equal(suggestDisplayTitle({ title: "unknown", description }), "");
+  }
+  assert.equal(suggestDisplayTitle(null), "");
+});
+
+test("search finds both function titles and original names without changing skill identities", () => {
+  const explicit = { id: "custom", title: "report-assistant", display_title: "整理销售周报" };
+  const known = { id: "known", title: "ai-moments" };
+  const items = [explicit, known];
+  assert.deepEqual(filterSkills(items, { q: "销售周报" }), [explicit]);
+  assert.deepEqual(filterSkills(items, { q: "REPORT-ASSISTANT" }), [explicit]);
+  assert.deepEqual(filterSkills(items, { q: "AI 资讯朋友圈" }), [known]);
+  assert.deepEqual(filterSkills(items, { q: "ai-moments" }), [known]);
+  assert.equal(explicit.title, "report-assistant");
+  assert.equal(Object.hasOwn(known, "display_title"), false);
+});
 
 test("the same GitHub directory has one identity across aliases, refs, and SKILL.md links", () => {
   const tree = normalizeSource("https://WWW.GitHub.com/Example/Useful-Skills/tree/main/skills/CopyWriter/?tab=readme#readme");
@@ -73,6 +124,16 @@ test("ordinary HTTPS pages provide an installation request without inventing a r
   assert.doesNotMatch(buildInstallPrompt(source), /仓库目录|npx/);
   assert.equal(safeUrl(source.url), source.url);
   assert.equal(normalizeSource("https://github.com.example.com/a/b/tree/main/x").kind, "website");
+});
+
+test("functional display titles never replace the original name or exact source in installation requests", () => {
+  const website = buildInstallPrompt({ title: "report-assistant", display_title: "生成销售周报", source_url: "https://example.com/skills/report-assistant" });
+  assert.match(website, /Skill 名称 "report-assistant"/);
+  assert.doesNotMatch(website, /生成销售周报/);
+  const github = buildInstallPrompt({ title: "original-name", display_title: "生成销售周报", source_url: "https://github.com/example/skills/tree/main/exact-directory" });
+  assert.match(github, /Skill 名称 "exact-directory"/);
+  assert.match(github, /仓库目录 "exact-directory"/);
+  assert.doesNotMatch(github, /生成销售周报/);
 });
 
 test("database values are revalidated and remote prose is never included in installation requests", () => {
@@ -198,6 +259,8 @@ test("the same helpers are available as a browser global without Node dependenci
   assert.equal(typeof context.window.SkillHub.normalizeSource, "function");
   assert.equal(typeof context.window.SkillHub.buildInstallPrompt, "function");
   assert.equal(typeof context.window.SkillHub.normalizeRoles, "function");
+  assert.equal(typeof context.window.SkillHub.getDisplayTitle, "function");
+  assert.equal(typeof context.window.SkillHub.suggestDisplayTitle, "function");
   assert.equal(context.window.SkillHub.ROLE_OPTIONS.length, 9);
   assert.equal(context.window.SkillHub.sourceType({}), "upload");
 });

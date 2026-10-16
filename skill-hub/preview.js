@@ -6,6 +6,16 @@
   const USER = { id: "demo-user", email: "preview@example.invalid" };
   const ROLE_OPTIONS = ["通用", "内容创作", "课程运营", "销售", "教学教研", "人力行政", "产品经理", "设计师", "剪辑"];
   const REMOVED_ROLES = new Set(["客户服务", "研发工程师", "财务", "管理者"]);
+  const KNOWN_DISPLAY_TITLES = {
+    "de-ai-copy": "去AI味写作",
+    "ai-moments": "生成 AI 资讯朋友圈",
+    "book-insights": "生成读书感悟朋友圈",
+    "python-crawler-success": "生成 Python 爬虫训练营成功案例朋友圈",
+  };
+  const LEGACY_SEED_TITLES = {
+    "course-outline-example": "课程大纲助手（示例）",
+    "weekly-review-example": "周报整理助手（示例）",
+  };
   const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
   const copy = value => JSON.parse(JSON.stringify(value));
   const same = (a, b) => a === b || (a != null && b != null && String(a) === String(b));
@@ -19,12 +29,12 @@
       author_id: USER.id, downloads: 0, created_at: now, updated_at: now,
       source_url: "", source_key: null, source_repo: "", source_path: "",
       original_author: "", recommendation: "", tested: false,
-      tested_with: "", tested_version: "", install_notes: "", roles: [],
+      tested_with: "", tested_version: "", install_notes: "", roles: [], display_title: "",
     };
     const skills = [
       {
         ...common, id: 1, slug: "web-design-guidelines", source_type: "external",
-        title: "Web Design Guidelines", category: "效率工具", tags: "网页,设计检查",
+        title: "Web Design Guidelines", display_title: "检查网页设计", category: "效率工具", tags: "网页,设计检查",
         description: "Vercel 提供的网页设计检查 Skill。这里展示外部推荐的页面效果，具体能力以原项目为准。",
         source_url: "https://github.com/vercel-labs/agent-skills/tree/main/skills/web-design-guidelines",
         source_key: "github:vercel-labs/agent-skills:skills/web-design-guidelines",
@@ -36,7 +46,7 @@
       },
       {
         ...common, id: 2, slug: "anthropic-pdf", source_type: "external",
-        title: "PDF", category: "数据处理", tags: "PDF,文档",
+        title: "PDF", display_title: "处理 PDF 文档", category: "数据处理", tags: "PDF,文档",
         description: "Anthropic 提供的 PDF 处理 Skill。这里展示外部推荐的页面效果，具体能力以原项目为准。",
         source_url: "https://github.com/anthropics/skills/tree/main/skills/pdf",
         source_key: "github:anthropics/skills:skills/pdf", source_repo: "anthropics/skills",
@@ -47,13 +57,13 @@
       },
       {
         ...common, id: 3, slug: "course-outline-example", source_type: "upload",
-        title: "课程大纲助手（示例）", category: "课程制作", tags: "大纲,备课",
+        title: "course-outline-example", display_title: "生成课程大纲（示例）", category: "课程制作", tags: "大纲,备课",
         roles: ["教学教研"],
         description: "一个可下载的内部上传示例，根据课程目标整理大纲。用于体验原有上传和版本流程。",
       },
       {
         ...common, id: 4, slug: "weekly-review-example", source_type: "upload",
-        title: "周报整理助手（示例）", category: "文案生成", tags: "周报,工作整理",
+        title: "weekly-review-example", display_title: "整理工作周报（示例）", category: "文案生成", tags: "周报,工作整理",
         roles: ["通用"],
         description: "一个可下载的内部上传示例，将已有工作记录整理成周报，不补写未经提供的进展。",
       },
@@ -63,7 +73,7 @@
       "---\nname: weekly-review-example\ndescription: 将已有工作记录整理成简明周报。这是 Skill Hub 预览示例。\n---\n\n# 周报整理助手（示例）\n\n这是用于体验 Skill Hub 的示例文件。\n\n请用户提供本周工作记录。按已完成、进行中和需要协助的事项整理，每件事保留具体进展。只使用用户提供的材料，不补写数据或成果。\n",
     ];
     return {
-      schema: 3, signedIn: true, nextId: 100,
+      schema: 4, signedIn: true, nextId: 100,
       profiles: [{ id: USER.id, display_name: "体验账号", department: "产品", created_at: now }],
       skills,
       versions: [3, 4].map((skillId, index) => ({
@@ -79,21 +89,28 @@
   let persistent = true;
   try {
     const saved = JSON.parse(sessionStorage.getItem(KEY) || "null");
-    if ([1, 2, 3].includes(saved?.schema) && Array.isArray(saved.skills) && Array.isArray(saved.versions)
+    if ([1, 2, 3, 4].includes(saved?.schema) && Array.isArray(saved.skills) && Array.isArray(saved.versions)
         && Array.isArray(saved.profiles) && saved.files && Number.isFinite(saved.nextId)) {
-      // Keep existing preview edits and files. Only known seed rows receive example roles.
+      // Keep existing preview edits and files. Only matching seed rows receive example metadata.
       const seeds = state.skills;
       saved.skills = saved.skills.map(skill => {
-        if (saved.schema < 3 && Array.isArray(skill.roles)) {
-          const roles = [...new Set(skill.roles.map(role => role === "市场运营" ? "课程运营" : role).filter(role => !REMOVED_ROLES.has(role)))];
-          return { ...skill, roles };
-        }
-        if (Object.prototype.hasOwnProperty.call(skill, "roles")) return skill;
-        const seed = saved.schema === 1 && seeds.find(item => same(item.id, skill.id)
+        const updated = { ...skill };
+        const seed = seeds.find(item => same(item.id, skill.id)
           && item.slug === skill.slug && item.source_key === skill.source_key);
-        return { ...skill, roles: seed ? copy(seed.roles) : [] };
+        if (saved.schema < 3 && Array.isArray(skill.roles)) {
+          updated.roles = [...new Set(skill.roles.map(role => role === "市场运营" ? "课程运营" : role).filter(role => !REMOVED_ROLES.has(role)))];
+        } else if (!Object.prototype.hasOwnProperty.call(skill, "roles")) {
+          updated.roles = saved.schema === 1 && seed ? copy(seed.roles) : [];
+        }
+        if (!Object.prototype.hasOwnProperty.call(skill, "display_title")) updated.display_title = "";
+        if (saved.schema < 4 && updated.display_title === "") {
+          const isOriginalSeed = seed && (skill.title === seed.title || skill.title === LEGACY_SEED_TITLES[skill.slug]);
+          updated.display_title = Object.prototype.hasOwnProperty.call(KNOWN_DISPLAY_TITLES, skill.title)
+            ? KNOWN_DISPLAY_TITLES[skill.title] : isOriginalSeed ? seed.display_title : "";
+        }
+        return updated;
       });
-      saved.schema = 3;
+      saved.schema = 4;
       state = saved;
     }
     sessionStorage.setItem(KEY, JSON.stringify(state));
@@ -134,6 +151,11 @@
     if (table === "skills") {
       const slugs = new Set(), sources = new Set();
       for (const skill of next.skills) {
+        if (typeof skill.display_title !== "string" || (skill.display_title !== ""
+            && (!skill.display_title.trim() || [...skill.display_title].length > 80
+              || /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/.test(skill.display_title)))) {
+          return fail("功能标题请填写 1 到 80 个字符，不要包含换行或控制字符。", "23514");
+        }
         if (!Array.isArray(skill.roles) || skill.roles.length > ROLE_OPTIONS.length
             || !skill.roles.every(role => ROLE_OPTIONS.includes(role))
             || (skill.roles.includes("通用") && skill.roles.length !== 1)) {
@@ -201,7 +223,7 @@
           rows = values.map(value => {
             const now = timestamp();
             const defaults = this.table === "skills"
-              ? { source_type: "upload", downloads: 0, created_at: now, updated_at: now, tested: false, roles: [] }
+              ? { source_type: "upload", downloads: 0, created_at: now, updated_at: now, tested: false, roles: [], display_title: "" }
               : this.table === "versions" ? { uploaded_at: now } : { created_at: now };
             return { ...defaults, id: next.nextId++, ...value };
           });

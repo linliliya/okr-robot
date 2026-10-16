@@ -200,7 +200,7 @@ function imported(name = "pdf", extra = {}) {
     type: "skill",
     skill: {
       source: H.normalizeSource(`https://github.com/example/skills/tree/main/skills/${name}`),
-      title: `${name} assistant`, description: `Work with ${name} files`,
+      title: `${name} assistant`, display_title: "处理工作文档", description: `Work with ${name} files`,
       original_author: "example", category: "效率工具", tags: `${name},documents`,
       ...extra,
     },
@@ -221,6 +221,7 @@ test("a source imports metadata and can publish after adding one recommendation 
   await app.submit();
   assert.equal(app.db.skills.length, 1);
   assert.equal(app.db.skills[0].title, result.skill.title);
+  assert.equal(app.db.skills[0].display_title, result.skill.display_title);
   assert.equal(app.db.skills[0].source_key, result.skill.source.key);
   assert.equal(app.db.skills[0].recommendation, "Useful for preparing course handouts.");
 });
@@ -243,6 +244,7 @@ test("a source read failure exposes manual entry and permits a complete recommen
   assert.equal(app.element("metadata-fields").open, true);
   assert.equal(app.element("recommend-submit").disabled, false);
   app.input("r-title", "Manually entered skill");
+  app.input("r-display-title", "整理课程资料");
   app.input("r-description", "A manually described use case");
   app.input("r-recommendation", "Useful to our team.");
   await app.submit();
@@ -385,7 +387,7 @@ test("editing an existing recommendation never imports or changes its saved sour
   const existing = {
     id: 7, slug: "existing-pdf", author_id: "demo-user", source_type: "external",
     source_url: source.url, source_key: source.key, source_repo: source.repo, source_path: source.path,
-    title: "Original title", description: "Original description", recommendation: "Original reason",
+    title: "Original title", display_title: "处理工作文档", description: "Original description", recommendation: "Original reason",
     category: "其他", tags: "", original_author: "example", tested: false,
   };
   const app = await harness({ existing: [existing], slug: existing.slug });
@@ -425,6 +427,7 @@ test("a late import after navigation cannot update the replacement recommendatio
   assert.notEqual(app.element("recommend-form"), oldForm);
   app.input("r-url", "https://example.org/new-recommendation");
   app.input("r-title", "A different skill");
+  app.input("r-display-title", "整理课程资料");
   app.input("r-description", "Current page description");
   app.input("r-recommendation", "Current page recommendation");
   waiting.resolve(result);
@@ -459,7 +462,7 @@ test("editing recommendation text retains its previously selected roles", async 
   const existing = {
     id: 7, slug: "existing-pdf", author_id: "demo-user", source_type: "external",
     source_url: result.skill.source.url, source_key: result.skill.source.key,
-    title: "PDF helper", description: "Prepare PDF handouts", recommendation: "Useful for handouts",
+    title: "PDF helper", display_title: "整理 PDF 讲义", description: "Prepare PDF handouts", recommendation: "Useful for handouts",
     category: "其他", tags: "", roles,
   };
   const app = await harness({ existing: [existing], slug: existing.slug });
@@ -480,4 +483,53 @@ test("general and individual roles are mutually exclusive while roles remain opt
   assert.deepEqual(app.selectedRoles(), [roles[0]]);
   app.chooseRole(roles[0], false);
   assert.deepEqual(app.selectedRoles(), []);
+});
+
+test("an imported Skill needs a function title before sharing and keeps its original name", async () => {
+  const result = imported("pdf", { display_title: "" });
+  const app = await harness({ inspect: async () => result });
+  app.input("r-url", result.skill.source.url);
+  await app.read();
+  assert.equal(app.element("r-display-title").value, "");
+  app.input("r-recommendation", "Useful for preparing course handouts.");
+  await app.submit();
+  assert.equal(app.db.skills.length, 0);
+  assert.match(app.element("recommend-error").textContent, /功能标题/);
+  app.input("r-display-title", "提取 PDF 中的课程资料");
+  await app.submit();
+  assert.equal(app.db.skills[0].display_title, "提取 PDF 中的课程资料");
+  assert.equal(app.db.skills[0].title, result.skill.title);
+  assert.equal(app.db.skills[0].source_url, result.skill.source.url);
+  assert.equal(H.buildInstallPrompt(app.db.skills[0]), H.buildInstallPrompt({ ...app.db.skills[0], display_title: "另一个功能标题" }));
+});
+
+test("an automatic source read preserves a function title the sharer already entered", async () => {
+  const result = imported();
+  const app = await harness({ inspect: async () => result });
+  app.input("r-url", result.skill.source.url);
+  app.input("r-display-title", "整理每周课程讲义");
+  await app.read();
+  assert.equal(app.element("r-display-title").value, "整理每周课程讲义");
+  assert.equal(app.element("r-title").value, result.skill.title);
+  app.input("r-recommendation", "Useful for preparing course handouts.");
+  await app.submit();
+  assert.equal(app.db.skills[0].display_title, "整理每周课程讲义");
+});
+
+test("editing a recommendation's function title preserves its original name and source", async () => {
+  const source = imported().skill.source;
+  const existing = {
+    id: 7, slug: "existing-pdf", author_id: "demo-user", source_type: "external",
+    source_url: source.url, source_key: source.key, source_repo: source.repo, source_path: source.path,
+    title: "pdf-helper", display_title: "处理 PDF", description: "Prepare PDF handouts",
+    recommendation: "Useful for handouts", category: "其他", tags: "",
+  };
+  const app = await harness({ existing: [existing], slug: existing.slug });
+  assert.equal(app.element("r-display-title").value, existing.display_title);
+  app.input("r-display-title", "整理 PDF 课程讲义");
+  await app.submit();
+  assert.equal(app.db.skills[0].display_title, "整理 PDF 课程讲义");
+  assert.equal(app.db.skills[0].title, existing.title);
+  assert.equal(app.db.skills[0].source_url, existing.source_url);
+  assert.equal(app.db.skills[0].source_key, existing.source_key);
 });

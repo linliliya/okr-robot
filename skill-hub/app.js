@@ -71,6 +71,58 @@ async function copyText(text, message = "已复制") {
   }
 }
 
+function displayTitleValue(skill) {
+  return skill?.display_title || H.suggestDisplayTitle(skill || {});
+}
+
+function validateDisplayTitle(value) {
+  const title = String(value || "").trim();
+  if (!title) throw new Error("请写一个功能标题，让同事知道这个 Skill 能做什么。");
+  if ([...title].length > 80 || /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/.test(title)) {
+    throw new Error("功能标题请控制在 80 个字以内，并写在一行。");
+  }
+  return title;
+}
+
+function skillHeadingHTML(skill) {
+  const canEdit = me && (H.sourceType(skill) === "upload" || me.id === skill.author_id);
+  return `<div class="skill-heading-row"><div><h1>${esc(H.getDisplayTitle(skill))}</h1><p class="skill-original-name"><span>Skill 名称</span> <code>${esc(skill.title)}</code></p></div>${canEdit ? `<button class="text-button" id="edit-skill-title">修改功能标题</button>` : ""}</div>`;
+}
+
+function bindTitleEditor(skill) {
+  const edit = document.getElementById("edit-skill-title");
+  if (!edit || !me || (H.sourceType(skill) === "external" && me.id !== skill.author_id)) return;
+  edit.onclick = () => {
+    const dialog = document.createElement("dialog");
+    dialog.className = "confirm-dialog title-dialog";
+    dialog.setAttribute("aria-labelledby", "title-edit-heading");
+    dialog.innerHTML = `<h2 id="title-edit-heading">修改功能标题</h2><p class="hint">标题最多 80 字，原始 Skill 名称会保留在副标题中。</p><form id="title-edit-form"><div class="field"><label for="edit-display-title">功能标题</label><input id="edit-display-title" name="display_title" required value="${esc(displayTitleValue(skill))}" placeholder="例如 去AI味写作"></div><p class="skill-original-name"><span>Skill 名称</span> <code>${esc(skill.title)}</code></p><div id="title-edit-error" class="form-error" role="alert"></div><div class="actions"><button type="button" class="btn ghost" id="cancel-title-edit">取消</button><button class="btn" id="save-title-edit">保存标题</button></div></form>`;
+    document.body.appendChild(dialog);
+    let saving = false;
+    const close = () => { dialog.close(); dialog.remove(); };
+    document.getElementById("cancel-title-edit").onclick = () => { if (!saving) close(); };
+    dialog.oncancel = event => { event.preventDefault(); if (!saving) close(); };
+    document.getElementById("title-edit-form").onsubmit = async event => {
+      event.preventDefault();
+      if (saving) return;
+      saving = true;
+      const submit = document.getElementById("save-title-edit"), cancel = document.getElementById("cancel-title-edit"), errorBox = document.getElementById("title-edit-error");
+      submit.disabled = true; cancel.disabled = true; submit.textContent = "正在保存…"; errorBox.textContent = "";
+      try {
+        const display_title = validateDisplayTitle(document.getElementById("edit-display-title").value);
+        const { data, error } = await sb.from("skills").update({ display_title, updated_at: new Date().toISOString() }).eq("id", skill.id).select("id").single();
+        if (error) throw error;
+        if (!data) throw new Error("没有保存成功，请确认你仍有编辑权限。");
+        close(); flash("功能标题已更新");
+        if (location.hash === "#/skill/" + encodeURIComponent(skill.slug)) await viewDetail(skill.slug).catch(showError);
+      } catch (error) { errorBox.textContent = errorMessage(error); }
+      finally { saving = false; submit.disabled = false; cancel.disabled = false; submit.textContent = "保存标题"; }
+    };
+    dialog.showModal();
+    document.getElementById("edit-display-title").focus();
+  };
+}
+
 function roleTagsHTML(roles) {
   const selected = H.normalizeRoles(roles);
   return selected.length ? selected.map(role => `<span class="role-tag">${esc(role === "通用" ? "所有岗位通用" : role)}</span>`).join("")
@@ -107,7 +159,7 @@ function bindRoleEditor(skill) {
     const dialog = document.createElement("dialog");
     dialog.className = "confirm-dialog roles-dialog";
     dialog.setAttribute("aria-labelledby", "roles-title");
-    dialog.innerHTML = `<h2 id="roles-title">为 ${esc(skill.title)} 设置岗位</h2><form id="role-edit-form">${roleFieldsHTML(skill.roles, "edit-role-fields")}<div id="role-edit-error" class="form-error" role="alert"></div><div class="actions"><button type="button" class="btn ghost" id="cancel-role-edit">取消</button><button class="btn" id="save-role-edit">保存岗位</button></div></form>`;
+    dialog.innerHTML = `<h2 id="roles-title">为 ${esc(H.getDisplayTitle(skill))} 设置岗位</h2><form id="role-edit-form">${roleFieldsHTML(skill.roles, "edit-role-fields")}<div id="role-edit-error" class="form-error" role="alert"></div><div class="actions"><button type="button" class="btn ghost" id="cancel-role-edit">取消</button><button class="btn" id="save-role-edit">保存岗位</button></div></form>`;
     document.body.appendChild(dialog);
     bindRoleFields("edit-role-fields");
     let saving = false;
@@ -283,7 +335,7 @@ function renderList() {
       ${sources.map(([key, label]) => `<button class="source-tab ${source === key ? "active" : ""}" data-source="${key}" aria-pressed="${source === key}">${label}<span>${key === "all" ? skillCache.length : skillCache.filter(s => H.sourceType(s) === key).length}</span></button>`).join("")}
     </div>
     <div class="toolbar">
-      <input type="search" id="search" aria-label="搜索 Skill" placeholder="搜索名称、用途或同事的推荐理由" value="${esc(q)}">
+      <input type="search" id="search" aria-label="搜索 Skill" placeholder="搜索功能、Skill 名称或同事的推荐理由" value="${esc(q)}">
       <button class="chip ${sort === "new" ? "active" : ""}" data-sort="new" aria-pressed="${sort === "new"}">最近更新</button>
       ${source === "upload" ? `<button class="chip ${sort === "hot" ? "active" : ""}" data-sort="hot" aria-pressed="${sort === "hot"}">下载最多</button>` : ""}
     </div>
@@ -320,7 +372,7 @@ function cardHTML(s) {
   return `<a class="card" href="#/skill/${encodeURIComponent(s.slug)}">
     <div class="card-top"><span class="source-badge ${external ? "external" : ""}">${external ? "外部推荐" : "内部上传"}</span>
       <span class="trial-status">${external ? s.tested ? "分享者已试用" : "尚未试用" : `${s.downloads || 0} 次下载`}</span></div>
-    <h3>${esc(s.title)}</h3>
+    <div class="card-heading"><h3>${esc(H.getDisplayTitle(s))}</h3><div class="skill-original-name">${esc(s.title)}</div></div>
     <div class="desc">${esc(s.description) || "查看介绍和使用方法"}</div>
     <div class="card-roles">${roleTagsHTML(s.roles)}</div>
     ${external && s.recommendation ? `<div class="card-reason"><span>${esc(s.recommendation)}</span></div>` : ""}
@@ -333,7 +385,7 @@ function viewShare() {
   $app.innerHTML = `<a class="backlink" href="#/">← 返回市集</a>
     <div class="share-intro"><h1>分享一个好用的 Skill</h1><p>可以上传你整理的文件，也可以把网上发现的好资源推荐给同事。</p></div>
     <div class="share-options">
-      <a class="share-option" href="#/upload"><span class="option-symbol" aria-hidden="true">↑</span><h2>上传 Skill 文件</h2><p>上传完整 ZIP 压缩包。名称和介绍会从 SKILL.md 中读取，也可以手动修改。</p><span class="btn ghost">选择文件 →</span></a>
+      <a class="share-option" href="#/upload"><span class="option-symbol" aria-hidden="true">↑</span><h2>上传 Skill 文件</h2><p>上传完整 ZIP 压缩包，自动读取名称和介绍，再用功能标题告诉同事它能做什么。</p><span class="btn ghost">选择文件 →</span></a>
       <a class="share-option" href="#/recommend"><span class="option-symbol" aria-hidden="true">↗</span><h2>分享网上的 Skill</h2><p>粘贴链接自动读取介绍，再写一句推荐理由。同事可以把安装请求发给 AI 工具。</p><span class="btn ghost">粘贴链接 →</span></a>
     </div>`;
 }
@@ -358,7 +410,7 @@ async function viewDetail(slug) {
   $app.innerHTML = `
     <a class="backlink" href="#/">← 返回列表</a>
     <div class="detail-head">
-      <h1>${esc(skill.title)}</h1>
+      ${skillHeadingHTML(skill)}
       <div class="meta">
         <span class="source-badge">内部上传</span>
         <span class="tag">${esc(skill.category)}</span>
@@ -434,6 +486,7 @@ async function viewDetail(slug) {
     </div>`;
 
   bindRoleEditor(skill);
+  bindTitleEditor(skill);
   async function download(path, version) {
     flash("正在下载…");
     const { data, error } = await sb.storage.from("skills").download(path);
@@ -483,7 +536,7 @@ async function viewUpload(targetSlug = "") {
     <div class="panel wide">
       <a class="backlink" href="${target ? "#/skill/" + encodeURIComponent(target.slug) : "#/share"}">← ${target ? "返回详情" : "选择分享方式"}</a>
       <h2>${target ? "上传新版本" : "上传 Skill 文件"}</h2>
-      ${target ? `<div class="notice">正在更新 <strong>${esc(target.title)}</strong>。这次上传会保留旧版本。</div>` : `<p class="form-intro">上传一个完整的 Skill 文件夹压缩包，同事可以下载后安装。</p>`}
+      ${target ? `<div class="notice">正在更新 <strong>${esc(H.getDisplayTitle(target))}</strong>。这次上传会保留旧版本。</div>` : `<p class="form-intro">上传一个完整的 Skill 文件夹压缩包，同事可以下载后安装。</p>`}
       <form id="up-form">
         <div class="field">
           <div class="dropzone" id="dz">
@@ -493,8 +546,10 @@ async function viewUpload(targetSlug = "") {
           </div>
           <input type="file" id="file" accept=".zip" hidden>
         </div>
-        <div class="field"><label>Skill 名称</label>
-          <input name="title" id="f-title" required maxlength="200" value="${esc(target?.title || "")}" placeholder="上传 zip 后自动识别，也可手动修改"></div>
+        <div class="field"><label for="f-display-title">功能标题 *</label>
+          <input name="display_title" id="f-display-title" required value="${esc(displayTitleValue(target))}" placeholder="例如 去AI味写作、生成 AI 资讯朋友圈"><p class="hint">最多 80 字，显示在卡片和详情页顶部，让同事一眼看懂它能做什么。</p></div>
+        <div class="field"><label for="f-title">原始 Skill 名称 *</label>
+          <input name="title" id="f-title" required maxlength="200" value="${esc(target?.title || "")}" placeholder="从 SKILL.md 自动读取，例如 de-ai-copy"><p class="hint">作为副标题展示，方便识别和使用原 Skill。</p></div>
         <div class="field"><label>一句话描述（这个 skill 是干嘛的、什么时候用）</label>
           <textarea name="description" id="f-desc" maxlength="4000" placeholder="上传 zip 后自动识别 SKILL.md 里的描述">${esc(target?.description || "")}</textarea></div>
         <div class="field"><label>分类</label>
@@ -513,6 +568,25 @@ async function viewUpload(targetSlug = "") {
   const fileInput = document.getElementById("file");
   const dz = document.getElementById("dz");
   let picked = null, parsedMd = "", parsing = false, submitting = false, parseSequence = 0;
+  const metadataInputs = {
+    title: document.getElementById("f-title"),
+    description: document.getElementById("f-desc"),
+    display_title: document.getElementById("f-display-title")
+  };
+  const automaticValues = { title: "", description: "", display_title: "" };
+  const editedFields = new Set(target ? Object.keys(metadataInputs) : []);
+  for (const [field, input] of Object.entries(metadataInputs)) {
+    input.oninput = () => editedFields.add(field);
+  }
+  function suggestMetadata(values) {
+    for (const [field, value] of Object.entries(values)) {
+      const input = metadataInputs[field];
+      if (!editedFields.has(field) && (!input.value || input.value === automaticValues[field])) {
+        input.value = value;
+        automaticValues[field] = value;
+      }
+    }
+  }
 
   dz.onclick = () => fileInput.click();
   dz.ondragover = e => { e.preventDefault(); dz.classList.add("drag"); };
@@ -530,6 +604,7 @@ async function viewUpload(targetSlug = "") {
     const publishButton = document.getElementById("up-btn");
     publishButton.disabled = false; publishButton.textContent = "发布";
     picked = fileInput.files[0];
+    suggestMetadata({ title: "", description: "", display_title: "" });
     if (!picked) return;
     if (!picked.name.toLowerCase().endsWith(".zip")) { flash("请选择 .zip 压缩包"); picked = null; return; }
     if (picked.size > 50 * 1024 * 1024) { flash("文件超过 50MB，请精简后再上传。"); picked = null; return; }
@@ -560,8 +635,11 @@ async function viewUpload(targetSlug = "") {
         desc = fmValue(fm[1], "description");
       }
       if (!name) name = path.split("/").length >= 2 ? path.split("/").slice(-2)[0] : picked.name.replace(".zip", "");
-      if (name && !document.getElementById("f-title").value) document.getElementById("f-title").value = name;
-      if (desc && !document.getElementById("f-desc").value) document.getElementById("f-desc").value = desc;
+      suggestMetadata({
+        title: name,
+        description: desc,
+        display_title: H.suggestDisplayTitle({ title: name, description: desc })
+      });
       result.innerHTML += `<div class="parse-ok">✅ 已自动识别 SKILL.md${name ? `：${esc(name)}` : ""}</div>`;
     } catch (err) {
       if (sequence !== parseSequence) return;
@@ -587,6 +665,7 @@ async function viewUpload(targetSlug = "") {
       const fd = new FormData(e.target);
       const title = fd.get("title").trim();
       if (!title) throw new Error("请填写 Skill 名称。");
+      const display_title = validateDisplayTitle(fd.get("display_title"));
       const slug = target?.slug || newSlug(title);
       const existing = target;
       let skillId, version = 1;
@@ -605,7 +684,7 @@ async function viewUpload(targetSlug = "") {
       uploadedPath = filePath;
 
       const meta = {
-        title, description: fd.get("description").trim(),
+        title, display_title, description: fd.get("description").trim(),
         category: fd.get("category"), tags: fd.get("tags").trim(),
         roles: H.normalizeRoles(fd.getAll("roles")),
         updated_at: new Date().toISOString(),
@@ -667,7 +746,7 @@ async function viewRecommend(slug = "") {
   $app.innerHTML = `<div class="panel wide recommend-panel">
     <a class="backlink" href="${editing ? "#/skill/" + encodeURIComponent(editing.slug) : "#/share"}">← ${editing ? "返回详情" : "选择分享方式"}</a>
     <h2>${editing ? "编辑推荐" : "推荐网上的 Skill"}</h2>
-    <p class="form-intro">${editing ? "可以更新介绍和使用心得，让同事更容易上手。" : "粘贴链接，自动填好基本信息。再写一句你为什么推荐。"}</p>
+    <p class="form-intro">${editing ? "可以更新功能标题、介绍和使用心得，让同事更容易上手。" : "粘贴链接读取基本信息，确认功能标题，再写一句你为什么推荐。"}</p>
     <form id="recommend-form">
       <div class="field"><label for="r-url">Skill 链接 *</label>
         <div class="import-input"><input id="r-url" name="source_url" type="url" required maxlength="2048" value="${value("source_url")}" ${editing ? "readonly" : ""} placeholder="粘贴 GitHub 或 skills.sh 链接">
@@ -676,11 +755,12 @@ async function viewRecommend(slug = "") {
       <div id="import-status" class="import-status" role="status" aria-live="polite"></div>
       <div class="field skill-picker" id="skill-choice-field" hidden><label for="skill-choice">这个仓库有多个 Skill，选一个推荐</label><select id="skill-choice"><option value="">请选择 Skill</option></select></div>
       <div id="imported-preview" class="imported-preview" hidden></div>
+      <div class="field"><label for="r-display-title">功能标题 *</label><input id="r-display-title" name="display_title" required value="${esc(displayTitleValue(editing))}" placeholder="例如 生成读书感悟朋友圈"><p class="hint">用一句短话说明它能做什么，最多 80 字。原始名称会显示在副标题中。</p></div>
       <details id="metadata-fields" class="form-details">
         <summary>查看或修改基本信息 <span>名称、介绍、作者等</span></summary>
         <div class="details-content">
           <div class="form-grid">
-            <div class="field"><label for="r-title">Skill 名称 *</label><input id="r-title" name="title" maxlength="200" value="${value("title")}" placeholder="Skill 的名称"></div>
+            <div class="field"><label for="r-title">原始 Skill 名称 *</label><input id="r-title" name="title" maxlength="200" value="${value("title")}" placeholder="例如 book-insights"></div>
             <div class="field"><label for="r-author">原作者</label><input id="r-author" name="original_author" maxlength="200" value="${value("original_author")}" placeholder="作者或组织名称"></div>
           </div>
           <div class="field"><label for="r-description">用途介绍 *</label><textarea id="r-description" name="description" maxlength="4000" placeholder="这个 Skill 能做什么，什么时候用">${value("description")}</textarea></div>
@@ -717,8 +797,9 @@ async function viewRecommend(slug = "") {
   const metadataFields = el("metadata-fields"), extraFields = el("extra-fields");
   const button = el("recommend-submit"), importButton = el("import-button");
   const picker = el("skill-choice"), pickerField = el("skill-choice-field");
-  const fields = { title: el("r-title"), description: el("r-description"), original_author: el("r-author"), category: el("r-category"), tags: el("r-tags") };
+  const fields = { title: el("r-title"), display_title: el("r-display-title"), description: el("r-description"), original_author: el("r-author"), category: el("r-category"), tags: el("r-tags") };
   let request = 0, controller = null, loading = false, submitting = false;
+  let customDisplayTitle = false;
   let imported = null, choices = [], lastAttempt = "", pasteTimer;
   const active = () => document.getElementById("recommend-form") === form;
   function updateButtons() {
@@ -733,9 +814,17 @@ async function viewRecommend(slug = "") {
   function renderSummary() {
     const title = fields.title.value.trim(), description = fields.description.value.trim();
     preview.hidden = !title;
-    preview.innerHTML = title ? `<div class="imported-heading"><span class="imported-icon" aria-hidden="true">↗</span><div><strong>${esc(title)}</strong><p>${esc(fields.original_author.value || "原作者未填写")}${fields.category.value ? " · " + esc(fields.category.value) : ""}</p></div><span class="source-badge external">${imported ? "已读取" : "基本信息"}</span></div><p class="imported-description">${esc(description || "请补充用途介绍")}</p>` : "";
+    const displayTitle = H.getDisplayTitle({ title, display_title: fields.display_title.value });
+    preview.innerHTML = title ? `<div class="imported-heading"><span class="imported-icon" aria-hidden="true">↗</span><div><strong>${esc(displayTitle)}</strong><p class="skill-original-name">${esc(title)}</p><p>${esc(fields.original_author.value || "原作者未填写")}${fields.category.value ? " · " + esc(fields.category.value) : ""}</p></div><span class="source-badge external">${imported ? "已读取" : "基本信息"}</span></div><p class="imported-description">${esc(description || "请补充用途介绍")}</p>` : "";
   }
   Object.values(fields).forEach(field => { field.oninput = renderSummary; });
+  fields.display_title.oninput = () => { customDisplayTitle = true; renderSummary(); };
+  const suggestTitle = () => {
+    if (!customDisplayTitle && !editing) fields.display_title.value = H.suggestDisplayTitle({ title: fields.title.value, description: fields.description.value });
+    renderSummary();
+  };
+  fields.title.oninput = suggestTitle;
+  fields.description.oninput = suggestTitle;
   fields.category.onchange = renderSummary;
   renderSummary();
   function cancelImport() {
@@ -745,6 +834,7 @@ async function viewRecommend(slug = "") {
     cancelImport();
     if (imported) {
       Object.entries(fields).forEach(([key, field]) => { field.value = key === "category" ? "其他" : ""; });
+      customDisplayTitle = false;
     }
     imported = null; choices = []; pathInput.value = ""; lastAttempt = "";
     pickerField.hidden = true; status.textContent = ""; errorBox.textContent = "";
@@ -778,10 +868,12 @@ async function viewRecommend(slug = "") {
       urlInput.value = source.url; pathInput.value = source.path; lastAttempt = source.url;
       imported.source = source;
       for (const [key, field] of Object.entries(fields)) {
-        const limit = key === "description" ? 4000 : key === "tags" ? 500 : 200;
+        if (key === "display_title" && customDisplayTitle) continue;
+        const limit = key === "description" ? 4000 : key === "tags" ? 500 : key === "display_title" ? 80 : 200;
         field.value = key === "category" ? (CATEGORIES.includes(imported.category) ? imported.category : "其他")
-          : String(Array.isArray(imported[key]) ? imported[key].join(", ") : imported[key] || "").slice(0, limit);
+          : Array.from(String(Array.isArray(imported[key]) ? imported[key].join(", ") : imported[key] || "")).slice(0, limit).join("");
       }
+      if (!customDisplayTitle && !fields.display_title.value) fields.display_title.value = H.suggestDisplayTitle(imported);
       choices = []; pickerField.hidden = true; metadataFields.open = !fields.title.value || !fields.description.value;
       status.textContent = result.notice || "已读取，确认下面的信息，再写一句推荐理由就能分享。";
       renderSummary();
@@ -825,6 +917,8 @@ async function viewRecommend(slug = "") {
         metadataFields.open = true; (!metadata.title ? fields.title : fields.description).focus();
         throw new Error("还缺少名称或用途介绍，请补充后发布。");
       }
+      try { metadata.display_title = validateDisplayTitle(get("display_title")); }
+      catch (error) { fields.display_title.focus(); throw error; }
       if (!metadata.recommendation) { el("r-recommendation").focus(); throw new Error("写一句为什么推荐给同事吧。"); }
       if (metadata.tested && !metadata.tested_with) { extraFields.open = true; el("r-tool").focus(); throw new Error("请补充试用工具，方便同事参考。"); }
       let saved;
@@ -878,7 +972,7 @@ function viewExternalDetail(skill) {
   $app.innerHTML = `<a class="backlink" href="#/">← 返回市集</a>
     <div class="detail-head">
       <div class="meta"><span class="source-badge external">外部推荐</span><span class="tag">${esc(skill.category)}</span><span>${skill.tested ? "分享者已试用" : "尚未试用"}</span></div>
-      <h1>${esc(skill.title)}</h1><p class="desc">${esc(skill.description)}</p>
+      ${skillHeadingHTML(skill)}<p class="desc">${esc(skill.description)}</p>
       <div class="meta"><span>${esc(skill.author?.display_name || "同事")} · ${esc(skill.author?.department || "")}</span><span>更新于 ${fmtDate(skill.updated_at)}</span></div>
       ${detailRolesHTML(skill)}
       <div class="actions"><a class="btn" href="#installation" id="jump-install">让 AI 帮我安装 ↓</a>${sourceUrl ? `<a class="btn ghost" href="${esc(sourceUrl)}" target="_blank" rel="noopener noreferrer">查看原项目 ↗</a>` : ""}
@@ -917,6 +1011,7 @@ function viewExternalDetail(skill) {
   const copy = document.getElementById("copy-install");
   if (copy) copy.onclick = () => copyText(installPrompt, "已复制，发给 AI 就可以开始安装");
   bindRoleEditor(skill);
+  bindTitleEditor(skill);
   const remove = document.getElementById("remove-recommendation");
   if (remove) remove.onclick = async () => {
     if (!await confirmAction("确定移除这条推荐吗？原项目和已安装的 Skill 不受影响。", "移除推荐")) return;

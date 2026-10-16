@@ -272,7 +272,8 @@
     const aliasKeys = [];
     if (metadata.name && SLUG.test(metadata.name)) aliasKeys.push(`skills:${repo}:${metadata.name}`);
     return { type: "skill", skill: {
-      source, title, description, original_author: (metadata.author || repo.split("/")[0]).slice(0, 200),
+      source, title, display_title: H.suggestDisplayTitle({ title, description }), description,
+      original_author: (metadata.author || repo.split("/")[0]).slice(0, 200),
       category: categoryFor(title, description), tags: "", aliasKeys: [...new Set(aliasKeys)]
     }, ...(notices.length ? { notice: notices.join(" ") } : {}) };
   }
