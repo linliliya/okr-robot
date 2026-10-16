@@ -26,3 +26,24 @@
 !camp-review/
 !camp-review/**
 camp-review/tests/
+
+# 销售话术复盘（仅提交使用虚构数据的回归测试，业务样例仍忽略）
+!sales-script/
+!sales-script/**
+sales-script/tests/*
+!sales-script/tests/logic.test.js
+!sales-script/tests/ai.test.js
+!sales-script/tests/todos.test.js
+!sales-script/tests/db.test.js
+!sales-script/tests/workflows.test.js
+!sales-script/tests/proposals.test.js
+!sales-script/tests/ai-status.test.js
+!sales-script/tests/edge-function.test.js
+
+!sales-script/tests/knowledge.test.js
+!sales-script/tests/db-knowledge.test.js
+!sales-script/tests/stream.test.js
+!sales-script/tests/db-stream.test.js
+!sales-script/tests/assistant-ui.test.js
+!sales-script/tests/ai-log-delete.test.js
+!sales-script/tests/reply-content.test.js
