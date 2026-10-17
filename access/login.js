@@ -1,5 +1,6 @@
 (async function(){
  'use strict';
+ if(!window.supabase || !window.INTERNAL_ACCESS_CONFIG || !window.AccessCommon){document.getElementById('message').textContent='登录组件未加载，请刷新重试。';return;}
  const client=supabase.createClient(INTERNAL_ACCESS_CONFIG.url,INTERNAL_ACCESS_CONFIG.key,{auth:{detectSessionInUrl:false}});
  const next=AccessCommon.safeNext(new URLSearchParams(location.search).get('next'),location.origin);
  let signup=false;
@@ -23,5 +24,6 @@
    await enter();
   }catch(error){message.textContent=AccessCommon.message(error);}finally{button.disabled=false;}
  };
+ button.disabled=false;document.getElementById('switch').disabled=false;
  const {data}=await client.auth.getSession();if(data.session){try{await enter();}catch(error){message.textContent=AccessCommon.message(error);}}
 })();
