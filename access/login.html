@@ -1,0 +1,6 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>登录 · 果粒科技内部工具</title>
+<link rel="stylesheet" href="ui.css"><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js"></script><script src="config.js"></script><script src="common.js"></script></head>
+<body><main class="panel"><a class="brand" href="/">果粒科技 · 内部工具</a><h1 id="title">登录</h1><p>仅限管理员名单中的邮箱。所有系统共用一个账号。</p>
+<form id="form"><label>公司邮箱<input name="email" type="email" autocomplete="username" required></label><label>密码<input name="password" type="password" autocomplete="current-password" minlength="6" required></label>
+<div id="signup-fields" hidden><label>姓名<input name="display_name" maxlength="20"></label><label>部门<select name="department"><option>内容</option><option>运营</option><option>交付</option><option>产品</option><option>其他</option></select></label></div>
+<button id="submit">登录</button></form><p id="message" role="status" aria-live="polite"></p><button class="link" id="switch" type="button">第一次使用？注册账号</button></main><script src="login.js"></script></body></html>

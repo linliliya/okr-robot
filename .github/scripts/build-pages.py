@@ -55,6 +55,8 @@ def assemble():
             "tests" in relative.parts or relative.name in {"setup.sql", "package.json", "package-lock.json"}
         ):
             continue
+        if relative.parts[0] == "access" and ("tests" in relative.parts or relative.name.endswith(".sql") or relative.name.endswith(".md")):
+            continue
         source = ROOT / relative
         if source.is_symlink() or not source.is_file():
             raise ValueError(f"Expected a regular published file: {name}")

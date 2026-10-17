@@ -55,3 +55,7 @@ sales-script/tests/*
 __pycache__/
 *.pyc
 camp-schedule/node_modules/
+
+# Shared account access
+!access/
+!access/**

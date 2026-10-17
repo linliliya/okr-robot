@@ -312,7 +312,7 @@
     const ok = !!(state.me && state.access && state.access.ok);
     document.getElementById('nav').hidden = !ok;
     document.getElementById('user-area').hidden = !state.me;
-    document.getElementById('nav-members').hidden = !ok;
+    document.getElementById('nav-members').hidden = !ok || !!(window.InternalAccess && InternalAccess.access?.role !== 'admin');
     const p = (state.me && state.me.profile) || {};
     const email = (state.me && state.me.user && state.me.user.email) || '';
     document.getElementById('nav-user').textContent =
@@ -464,7 +464,7 @@
     let title, body;
     if (a.reason === 'not_member') {
       title = '账号还没开通';
-      body = `你的账号（${esc(email)}）还没开通复盘系统，请让已开通的同事在『成员』页添加你的邮箱`;
+      body = `你的账号（${esc(email)}）还没开通复盘系统，请联系管理员调整账号权限`;
     } else if (a.reason === 'tables_missing') {
       title = '数据库还没初始化';
       body = '数据库还没初始化，请按 <code>camp-review/SETUP.md</code> 执行 <code>setup.sql</code>';
@@ -2088,53 +2088,13 @@
   }
 
   // ---------- 视图：成员 ----------
-  async function viewMembers(seq) {
-    $app.innerHTML = loadingHTML();
-    let list;
-    try { list = (await DB.listMembers()) || []; }
-    catch (err) { if (seq === routeSeq) { $app.innerHTML = ''; handleErr(err, '加载成员失败'); } return; }
-    if (seq !== routeSeq) return;
-    const myEmail = String((state.me && state.me.user && state.me.user.email) || '').toLowerCase();
-    $app.innerHTML = `
-      <div class="page-head"><h1>成员</h1></div>
-      <section class="card-block">
-        <p class="lead">对方先用这个邮箱在 Skill 市集或本页注册账号，你把邮箱加进来后他就能看到复盘数据。</p>
-        <form class="inline-form" id="m-form">
-          <input class="input" type="email" id="m-email" required placeholder="同事的邮箱，例如 name@example.com" autocomplete="off">
-          <button class="btn" id="m-add">添加成员</button>
-        </form>
-        <div class="table-wrap"><table class="tbl">
-          <thead><tr><th>邮箱</th><th>添加时间</th><th>添加人</th><th></th></tr></thead>
-          <tbody>${list.length ? list.map(mb => {
-            const self = String(mb.email || '').toLowerCase() === myEmail;
-            return `<tr><td>${esc(mb.email)}${self ? ' <span class="muted">（你）</span>' : ''}</td>
-              <td>${esc(fmtTime(mb.added_at))}</td><td>${esc(mb.added_by_name || '—')}</td>
-              <td>${self ? '' : `<button type="button" class="btn small danger" data-rm="${esc(mb.email)}">移除</button>`}</td></tr>`;
-          }).join('') : '<tr><td colspan="4" class="muted">还没有成员</td></tr>'}</tbody>
-        </table></div>
-      </section>`;
-    document.getElementById('m-form').onsubmit = async e => {
-      e.preventDefault();
-      const input = document.getElementById('m-email');
-      const email = input.value.trim().toLowerCase();
-      if (!email) return;
-      const btn = document.getElementById('m-add');
-      btn.disabled = true;
-      try { await DB.addMember(email); flash(`已添加 ${email}`); viewMembers(routeSeq); }
-      catch (err) { btn.disabled = false; handleErr(err, '添加失败'); }
-    };
-    $app.querySelectorAll('[data-rm]').forEach(b => {
-      b.onclick = async () => {
-        if (!confirm(`确定移除 ${b.dataset.rm} 吗？移除后他就看不到复盘数据了。`)) return;
-        b.disabled = true;
-        try { await DB.removeMember(b.dataset.rm); flash('已移除'); viewMembers(routeSeq); }
-        catch (err) { b.disabled = false; handleErr(err, '移除失败'); }
-      };
-    });
+  async function viewMembers() {
+    location.replace('/access/admin.html');
   }
 
   // ---------- 启动 ----------
   async function boot() {
+    if(window.InternalAccess && !await InternalAccess.ready) return;
     if (!L || !DB) {
       $app.innerHTML = '<div class="note-card"><h2>页面没加载完整</h2><p>有脚本文件没加载成功，请刷新重试。</p></div>';
       return;

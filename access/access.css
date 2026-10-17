@@ -1,0 +1,4 @@
+[hidden]{display:none!important}
+html[data-access]:not([data-access="ready"]) body > :not(#access-message):not(script):not(style){display:none!important}
+#access-message{font-family:system-ui,sans-serif;max-width:640px;margin:12vh auto;padding:32px;color:#172033;background:#fff;border:1px solid #dbe3ee;border-radius:16px;line-height:1.7}
+#access-message a,#access-message button{margin-right:12px}
