@@ -81,7 +81,7 @@
 
   // ---------- Supabase ----------
   function supabaseAdapter(config) {
-    const sb = root.supabase.createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY);
+    const sb = root.InternalAccess?.client || root.supabase.createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY);
     let profileNames = null;
     let currentEmail = '';
 
@@ -93,7 +93,7 @@
         return makeError('tables_missing', '数据库还没初始化，请按 sales-script/SETUP.md 执行 setup.sql', e);
       }
       if (code === '42501' || /row-level security/i.test(msg)) {
-        return makeError('not_member', `你的账号${currentEmail ? '（' + currentEmail + '）' : ''}还没开通，请让已开通的同事在「成员」页添加你的邮箱`, e);
+        return makeError('not_member', `你的账号${currentEmail ? '（' + currentEmail + '）' : ''}还没开通，请联系管理员调整账号权限`, e);
       }
       if (/JWT|token|PGRST301|PGRST303/i.test(code + msg)) return makeError('auth', '登录已过期，请重新登录', e);
       if (/Failed to fetch|NetworkError|Load failed|fetch failed/i.test(msg)) return makeError('network', '网络连接失败，请检查网络后重试', e);

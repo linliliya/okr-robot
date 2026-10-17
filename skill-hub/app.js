@@ -1,7 +1,7 @@
 const CFG = window.SKILLHUB_CONFIG || {};
 const PREVIEW = !!window.SKILLHUB_PREVIEW_CLIENT;
 const CONFIGURED = PREVIEW || (CFG.SUPABASE_URL && !CFG.SUPABASE_URL.includes("YOUR-PROJECT"));
-const sb = window.SKILLHUB_PREVIEW_CLIENT || (CONFIGURED ? supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY) : null);
+const sb = window.SKILLHUB_PREVIEW_CLIENT || window.InternalAccess?.client || (CONFIGURED ? supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY) : null);
 const H = window.SkillHub;
 
 const CATEGORIES = ["文案生成", "数据处理", "课程制作", "招聘筛选", "资讯采集", "效率工具", "其他"];
@@ -293,6 +293,7 @@ document.getElementById("nav-logout").onclick = async () => {
 
 // ---------- 路由 ----------
 async function route() {
+  if(window.InternalAccess && !await InternalAccess.ready) return;
   cancelReadmeReads();
   try {
   if (!CONFIGURED) return viewSetupNote();
@@ -373,7 +374,7 @@ function viewAuth(mode) {
       const msg = String(err.message || err);
       if (msg.includes("Invalid login")) flash("邮箱或密码不对");
       else if (msg.includes("already registered")) flash("这个邮箱已经注册过了，直接登录吧");
-      else if (msg.includes("confirm")) flash("提示管理员：需在 Supabase 后台关闭邮箱验证（见 SETUP.md 第 4 步）", 5000);
+      else if (msg.includes("confirm")) flash("账号暂时无法登录，请联系管理员", 5000);
       else flash("出错了：" + msg, 4000);
     }
   };

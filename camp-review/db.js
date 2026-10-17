@@ -11,7 +11,7 @@
 
   const MSG = {
     tables_missing: '数据库还没初始化，请按 camp-review/SETUP.md 执行 setup.sql',
-    not_member: '你的账号还没开通复盘系统，请让已开通的同事在『成员』页添加你的邮箱',
+    not_member: '你的账号还没开通复盘系统，请联系管理员调整账号权限',
     network: '网络连接失败，请检查网络后重试',
     server_down: '数据库暂时连不上，可能在休眠，请稍后重试（管理员可参考 camp-review/SETUP.md）',
     need_login: '请先登录',
@@ -35,7 +35,7 @@
 
   function notMemberMsg(email) {
     return email
-      ? `你的账号（${email}）还没开通复盘系统，请让已开通的同事在『成员』页添加你的邮箱`
+      ? `你的账号（${email}）还没开通复盘系统，请联系管理员调整账号权限`
       : MSG.not_member;
   }
 
@@ -185,7 +185,7 @@
     let loadError;
     const lib = root.supabase;
     if (lib && typeof lib.createClient === 'function') {
-      try { sb = lib.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY); } catch (e) { loadError = e; }
+      try { sb = root.InternalAccess?.client || lib.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY); } catch (e) { loadError = e; }
     }
     function client() {
       if (!sb) throw makeError('network', 'Supabase 组件没加载成功，请检查网络后刷新页面', loadError);

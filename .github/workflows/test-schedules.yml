@@ -3,11 +3,13 @@ on:
   pull_request:
     paths:
       - 'camp-schedule/**'
+      - 'access/**'
       - '.github/workflows/test-schedules.yml'
   push:
     branches: [main]
     paths:
       - 'camp-schedule/**'
+      - 'access/**'
       - '.github/workflows/test-schedules.yml'
 permissions:
   contents: read
@@ -26,3 +28,6 @@ jobs:
           cache-dependency-path: camp-schedule/package-lock.json
       - run: npm ci
       - run: npm test
+      - run: node --test ../access/tests/*.test.js
+        env:
+          NODE_PATH: ${{ github.workspace }}/camp-schedule/node_modules

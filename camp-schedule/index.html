@@ -1,6 +1,12 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-access="pending">
 <head>
+<link rel="stylesheet" href="/access/access.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js"></script>
+<script src="/access/config.js"></script>
+<script src="/access/common.js"></script>
+<script src="/access/gate.js" data-app="crawler"></script>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>爬虫训练营排期</title>
@@ -205,7 +211,6 @@ button:disabled{opacity:.5;cursor:not-allowed}
 <div id="root"></div>
 <div id="modal-root"></div>
 <div id="notice" role="status" aria-live="polite" onclick="this.textContent=''"></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="config.js"></script>
 <script src="cloud.js"></script>
 <script src="data.js"></script>
@@ -590,7 +595,7 @@ function syncBar(){
     ${!s.online ? '<br>显示上次读取的排期，恢复连接后才能保存。' : `<br>所有成员共用排期和完成进度${stamp ? ' · 最近读取 '+stamp : ''}`}</div>
     <span>${esc(s.user.email)}</span><button class="btn ghost" onclick="cloud.refresh()" ${s.busy?'disabled':''}>刷新</button>
     ${(legacy.local.length || legacy.shared.length || legacy.warning) ? '<button class="btn ghost" data-write onclick="openImport()">导入旧排期</button>' : ''}
-    <a class="btn ghost" href="/camp-review/index.html#/members">成员权限</a><button class="btn ghost" onclick="logout()">退出</button></div>`;
+    ${window.InternalAccess?.access?.role==='admin'?'<a class="btn ghost" href="/access/admin.html">账号权限</a>':''}<button class="btn ghost" onclick="logout()">退出</button></div>`;
 }
 function openImport(source){
   if(!editable()) return;
@@ -695,7 +700,7 @@ function bootCloud(){
   if(!window.supabase || !window.ScheduleCloud){renderGate();return;}
   try{legacy=ScheduleCloud.readLegacy(localStorage,location.hash,LS_KEY,DONE_KEY);}catch(_){legacy.warning='浏览器未允许读取本机数据。';}
   const config=window.SCHEDULE_CONFIG;
-  const client=window.supabase.createClient(config.url,config.key,{auth:{detectSessionInUrl:false}});
+  const client=window.InternalAccess?.client || window.supabase.createClient(config.url,config.key,{auth:{detectSessionInUrl:false}});
   cloud=new ScheduleCloud.Store(client,config.program,state=>{
     camps=state.camps;done={};
     for(const [id,task] of Object.entries(state.tasks))if(task.completed)done[id]=1;
@@ -710,7 +715,7 @@ function bootCloud(){
   window.addEventListener('pagehide',()=>cloud.stop());
   window.addEventListener('pageshow',event=>{if(event.persisted)location.reload();});
 }
-bootCloud();
+if(window.InternalAccess) InternalAccess.ready.then(ok=>{if(ok)bootCloud();}); else bootCloud();
 </script>
 </body>
 </html>

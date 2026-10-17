@@ -1,6 +1,12 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-access="pending">
 <head>
+<link rel="stylesheet" href="/access/access.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js"></script>
+<script src="/access/config.js"></script>
+<script src="/access/common.js"></script>
+<script src="/access/gate.js" data-app="sales-script"></script>
+
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>话术复盘</title>
@@ -367,7 +373,6 @@
 <div id="modal-root"></div>
 <div id="toast"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <!-- 改了 js 之后把 v= 改成新日期，避免浏览器 / GitHub Pages 缓存拿到新旧混用的文件 -->
 <script src="config.js?v=20261016-reply-notes1"></script>
 <script src="logic.js?v=20261016-reply-notes1"></script>

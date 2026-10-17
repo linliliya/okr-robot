@@ -265,6 +265,7 @@
   }
 
   async function boot() {
+    if(window.InternalAccess && !await InternalAccess.ready) return;
     const { mode } = DB.init(CFG);
     $('#demo-bar').hidden = mode !== 'demo';
     if (mode === 'demo') {
@@ -332,7 +333,7 @@
   function renderNoAccess(acc) {
     $('#top').hidden = true;
     const msg = acc.reason === 'not_member'
-      ? `你的账号（${S.email}）还没开通话术复盘系统，请让已开通的同事在「成员」页添加你的邮箱。`
+      ? `你的账号（${S.email}）还没开通话术复盘系统，请联系管理员调整账号权限。`
       : acc.reason === 'tables_missing' ? '数据库还没初始化，请按 sales-script/SETUP.md 执行 setup.sql。' : acc.message;
     app().innerHTML = `<div class="auth card" style="text-align:center"><h1>还不能使用</h1><p class="note warn" style="margin:16px 0;text-align:left">${esc(msg)}</p>
       <div class="row" style="justify-content:center"><button class="btn plain" onclick="location.reload()">刷新</button><button class="btn plain" id="na-out">换个账号登录</button></div></div>`;
@@ -1256,31 +1257,7 @@
 
   // ---------- 成员 ----------
   async function viewMembers() {
-    const alive = viewToken();
-    app().innerHTML = `
-      <div class="page-head"><div><h1>成员</h1><p class="sub">只有名单里的邮箱能使用话术复盘系统</p></div></div>
-      <div class="card">
-        <div class="row"><input type="email" id="mb-email" placeholder="同事的邮箱" style="max-width:320px"><button class="btn" id="mb-add">添加</button></div>
-        <p class="hint">对方要先用这个邮箱在 Skill 市集或本页注册账号，注册之后才能加进来；加好后对方刷新页面就能用了</p>
-        <div id="mb-list" style="margin-top:14px"><span class="muted">加载中…</span></div>
-      </div>`;
-    const draw = async () => {
-      try {
-        const list = await DB.listMembers();
-        if (!alive()) return;
-        $('#mb-list').innerHTML = `<table class="mini" style="width:100%"><tr><th>邮箱</th><th>添加时间</th><th>添加人</th><th></th></tr>
-          ${list.map(m => `<tr><td>${esc(m.email)}</td><td>${esc(L.fmtDateTime(m.added_at))}</td><td>${esc(m.added_by_name)}</td>
-            <td>${m.email === String(S.email).toLowerCase() ? '<span class="faint">你自己</span>' : `<button class="linkbtn danger" data-rm="${esc(m.email)}">移除</button>`}</td></tr>`).join('')}</table>`;
-        $$('[data-rm]').forEach(b => b.addEventListener('click', async () => {
-          if (!(await confirmBox('移除成员', `移除后 ${b.dataset.rm} 就看不到话术和案例了。`, '移除', true))) return;
-          try { await DB.removeMember(b.dataset.rm); draw(); } catch (e) { showErr(e); }
-        }));
-      } catch (e) { if (alive()) $('#mb-list').innerHTML = `<div class="note err">${esc(e.message)}</div>`; }
-    };
-    $('#mb-add').addEventListener('click', () => withBusy($('#mb-add'), '添加中…', async () => {
-      try { await DB.addMember($('#mb-email').value); $('#mb-email').value = ''; toast('已添加'); draw(); } catch (e) { showErr(e); }
-    }));
-    draw();
+    location.replace('/access/admin.html');
   }
 
   // ======================================================================
