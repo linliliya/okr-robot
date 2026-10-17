@@ -1,0 +1,72 @@
+name: Publish internal tools
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '7,17,27,37,47,57 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: internal-tools-pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: read
+    outputs:
+      publish: ${{ steps.prepare.outputs.publish }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          submodules: true
+
+      # Only the protected main branch is eligible for publication.
+      # This workflow and its token remain in the owner-controlled repository.
+      - name: Update the AI schedule reference
+        run: |
+          git submodule update --init --remote ai-camp-schedule
+          if ! git diff --quiet -- ai-camp-schedule; then
+            git add ai-camp-schedule
+            git -c user.name='github-actions[bot]' \
+                -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+                commit -m 'chore: update AI schedule to the approved main version'
+            git push origin HEAD:main
+          fi
+
+      - name: Prepare the site when published versions differ
+        id: prepare
+        env:
+          FORCE_PUBLISH: ${{ github.event_name == 'workflow_dispatch' }}
+        run: python3 .github/scripts/build-pages.py
+
+      - uses: actions/configure-pages@v5
+        if: steps.prepare.outputs.publish == 'true'
+
+      - uses: actions/upload-pages-artifact@v4
+        if: steps.prepare.outputs.publish == 'true'
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    if: needs.build.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publish
+        id: deployment
+        uses: actions/deploy-pages@v4

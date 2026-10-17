@@ -8,6 +8,8 @@
 !.github/
 !.github/**
 !CNAME
+!.gitmodules
+!DEPLOYMENT.md
 
 # 内部工具首页
 !index.html
@@ -17,6 +19,7 @@
 !camp-schedule/**
 !ai-camp-schedule/
 !ai-camp-schedule/**
+!ai-camp-schedule
 
 # Skill 共享平台
 !skill-hub/

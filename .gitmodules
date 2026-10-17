@@ -1,0 +1,4 @@
+[submodule "ai-camp-schedule"]
+	path = ai-camp-schedule
+	url = https://github.com/linliliya/ai-camp-schedule.git
+	branch = main
