@@ -51,6 +51,10 @@ def assemble():
         relative = Path(name)
         if relative.parts[0] in excluded:
             continue
+        if relative.parts[0] == "camp-schedule" and (
+            "tests" in relative.parts or relative.name in {"setup.sql", "package.json", "package-lock.json"}
+        ):
+            continue
         source = ROOT / relative
         if source.is_symlink() or not source.is_file():
             raise ValueError(f"Expected a regular published file: {name}")
@@ -59,7 +63,12 @@ def assemble():
         shutil.copy2(source, destination)
 
     # Copy static files only. Never execute code from the contributor repository.
-    for name in ("index.html", "data.js"):
+    assets = ["index.html", "data.js"]
+    # Supports publishing the portal before the independent AI repository is
+    # upgraded; once either cloud asset exists, require the complete pair.
+    if any((ROOT / "ai-camp-schedule" / name).exists() for name in ("config.js", "cloud.js")):
+        assets += ["config.js", "cloud.js"]
+    for name in assets:
         source = ROOT / "ai-camp-schedule" / name
         if source.is_symlink() or not source.is_file():
             raise ValueError(f"Expected an AI schedule static file: {name}")

@@ -185,11 +185,29 @@ button{font-family:inherit}
 @media(max-width:1100px){.camps,.td-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:760px){.camps,.td-grid{grid-template-columns:1fr}}
 @media(max-width:520px){.wrap{padding:16px 14px}}
+
+/* Shared team data */
+button:disabled{opacity:.5;cursor:not-allowed}
+.syncbar{padding:12px 28px;background:#eff6ff;border-bottom:1px solid #bfdbfe;display:flex;align-items:center;gap:10px;flex-wrap:wrap;color:#334155;font-size:12px}
+.syncbar.offline{background:#fff7ed;border-color:#fed7aa}
+.syncbar .sync-text{flex:1;min-width:200px}
+.syncbar strong{color:#166534}.syncbar.offline strong{color:#9a3412}
+.auth-card{max-width:440px;margin:64px auto;background:#fff;border:1px solid #e2e8f0;padding:28px;border-radius:16px;box-shadow:0 8px 28px #0f172a0a}
+.auth-card h1{font-size:20px;margin-bottom:12px}.auth-card p{color:#64748b;margin-bottom:20px}.auth-card form{display:grid;gap:12px}
+.auth-card a{color:#2563eb}.auth-help{font-size:12px;margin-top:16px}.auth-error{color:#b91c1c;font-size:13px;min-height:20px}
+.import-list{max-height:240px;overflow:auto;padding:12px;background:#f8fafc;border-radius:8px;margin:16px 0;line-height:2}
+.import-note{font-size:13px;color:#475569;line-height:1.7}
+#notice:not(:empty){position:fixed;right:20px;bottom:20px;max-width:min(560px,calc(100vw - 40px));padding:14px 18px;background:#0f172a;color:#fff;box-shadow:0 8px 24px #0002;border-radius:10px;z-index:1000;cursor:pointer}
+@media(max-width:600px){.syncbar{padding:12px 16px}.auth-card{margin:24px 16px}.sec-actions{flex-wrap:wrap}}
 </style>
 </head>
 <body>
 <div id="root"></div>
 <div id="modal-root"></div>
+<div id="notice" role="status" aria-live="polite" onclick="this.textContent=''"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script src="cloud.js"></script>
 <script src="data.js"></script>
 <script>
 // ── Date helpers ─────────────────────────────────────────────────────────────
@@ -201,53 +219,22 @@ function fmt(d){ return `${d.getMonth()+1}月${d.getDate()}日`; }
 function fmtS(d){ return `${d.getMonth()+1}/${d.getDate()}`; }
 function dayDiff(a,b){ return Math.round((b-a)/DAY_MS); }
 
-// ── 营期数据：localStorage 持久化 + URL 分享 ─────────────────────────────────
-// URL 格式：#5:2026-06-07:6.8,6:2026-08-30 （期数:开营日:跳过周.跳过周）
+// Team records live in Supabase. Legacy browser data is read only for explicit import.
 const LS_KEY = 'crawler-camps-v1';
-
-function parseShare(s){
-  try{
-    const arr = s.split(',').map(part => {
-      const [term, date, skips] = part.split(':');
-      if(!/^\d{4}-\d{2}-\d{2}$/.test(date) || !(parseInt(term) >= 1)) throw 0;
-      return { term: parseInt(term), openDate: date,
-               skips: skips ? skips.split('.').map(Number).filter(n => n>=1 && n<=12) : [] };
-    });
-    return arr.length ? arr : null;
-  }catch(e){ return null; }
-}
-function loadCamps(){
-  const fromHash = parseShare(decodeURIComponent(location.hash.replace(/^#/,'')));
-  if(fromHash){ localStorage.setItem(LS_KEY, JSON.stringify(fromHash)); return fromHash; }
-  try{ return JSON.parse(localStorage.getItem(LS_KEY)) || []; }catch(e){ return []; }
-}
-let camps = loadCamps();
-
-function persist(){
-  localStorage.setItem(LS_KEY, JSON.stringify(camps));
-  const h = camps.map(c =>
-    `${c.term}:${c.openDate}${c.skips && c.skips.length ? ':'+[...c.skips].sort((a,b)=>a-b).join('.') : ''}`
-  ).join(',');
-  history.replaceState(null, '', camps.length ? '#'+h : location.pathname);
-}
-persist();  // 让 URL 与当前数据保持一致
-
-// ── 任务完成状态（存本浏览器，不随链接分享）──────────────────────────────────
 const DONE_KEY = 'crawler-camps-done-v1';
-let done = {};
-try{ done = JSON.parse(localStorage.getItem(DONE_KEY)) || {}; }catch(e){ done = {}; }
-
-// 任务标识：期数 + 周段名 + 任务标题（SOP 改标题会重置该任务的勾选状态，可接受）
-function taskId(term, w, task){ return `${term}|${w.label}|${task.day}|${task.t}`; }
-
-// onclick 里传下标而不是原文，避免标题里的特殊字符破坏 HTML
+let camps = [], done = {}, cloud = null, editingCamp = null;
+let legacy = { local: [], shared: [], done: {}, warning: '' };
+function esc(value){ return String(value == null ? '' : value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function editable(){ return !!(cloud && cloud.state.phase === 'ready' && cloud.state.online && !cloud.state.busy); }
+function report(message){ const el=document.getElementById('notice'); el.textContent=message; }
+function writeError(error){ report(error && error.message || '操作没有完成，请刷新后核对。'); }
+function taskId(term, w, task){ const camp=camps.find(c => c.term===term); return `${camp ? camp.id : ''}|${w.key}|${task.day}|${task.t}`; }
 let REG = [];
 function ckId(id){ REG.push(id); return REG.length - 1; }
-function toggleDone(i){
-  const id = REG[i];
-  if(done[id]) delete done[id]; else done[id] = 1;
-  localStorage.setItem(DONE_KEY, JSON.stringify(done));
-  render();
+async function toggleDone(i){
+  if(!editable()) return;
+  const id=REG[i], completed=!done[id];
+  try{ await cloud.setTask(id,completed); }catch(error){ writeError(error); }
 }
 
 // 时间字符串 → 分钟数，用于今日待办排序
@@ -268,19 +255,19 @@ function timeMin(task){
 function campWeeks(camp){
   const open = parseD(camp.openDate);
   const mon0 = addD(open, -((open.getDay()+6)%7));   // 开营周的周一
-  const weeks = [{ label:'开营周', short:'开', type:'open', mon:mon0 }];
+  const weeks = [{ key:'open', label:'开营周', short:'开', type:'open', mon:mon0 }];
   const skips = new Set(camp.skips || []);
   let mon = addD(mon0, 7);
   for(let n=1; n<=12; n++){
     if(skips.has(n)){
-      weeks.push({ label:'休息周', short:'休', type:'rest', sub:'长假顺延', mon });
+      weeks.push({ key:'rest-'+n, label:'休息周', short:'休', type:'rest', sub:'长假顺延', mon });
       mon = addD(mon, 7);
     }
     let type='regular', sub=null;
     if(n===4){ type='exam'; sub='工信部考试报名'; }
     if(n===5){ type='exam'; sub='工信部考试周 · 接单测评'; }
     if(n===12){ type='close'; sub='结营周'; }
-    weeks.push({ label:`第${n}周`, short:String(n), type, sub, mon, n });
+    weeks.push({ key:`week-${n}`, label:`第${n}周`, short:String(n), type, sub, mon, n });
     mon = addD(mon, 7);
   }
   weeks.forEach(w => w.sun = addD(w.mon,6));
@@ -315,7 +302,7 @@ function taskHtml(task, term, w, opts={}){
     ? `<span class="task-late">逾期${opts.lateDay ? ' · '+opts.lateDay : ''}</span>` : '';
   const campTag = opts.campTag ? `<span class="follow-camp">${opts.campTag}</span>` : '';
   return `<div class="task${isDone?' done':''}">
-    <button class="ckb${isDone?' on':''}" title="${isDone?'取消完成':'标记完成'}" onclick="toggleDone(${ckId(id)})"></button>
+    <button data-write aria-pressed="${isDone}" class="ckb${isDone?' on':''}" title="${isDone?'取消完成':'标记完成'}" onclick="toggleDone(${ckId(id)})"></button>
     <div class="task-body">
       <div class="task-t">${campTag}${time}${task.t}${tag}${late}</div>
       ${task.d ? `<div class="task-d">${task.d}${link}</div>` : (link ? `<div class="task-d">${link}</div>` : '')}
@@ -373,8 +360,8 @@ function campCard(camp, today){
   const st = statusInfo(weeks, pos);
 
   const acts = `<div class="camp-acts">
-    <button class="mini-btn" onclick="openForm(${camp.term})">编辑</button>
-    <button class="mini-btn" onclick="deleteCamp(${camp.term})">删除</button>
+    <button data-write class="mini-btn" onclick="openForm(${camp.term})">编辑</button>
+    <button data-write class="mini-btn" onclick="deleteCamp(${camp.term})">删除</button>
   </div>`;
 
   const hdr = `<div class="camp-hdr">
@@ -499,7 +486,9 @@ function todaySection(campsData, today){
 
 // ── 营期表单（添加 / 编辑）──────────────────────────────────────────────────
 function openForm(term){
+  if(!editable()) return;
   const camp = term != null ? camps.find(c => c.term === term) : null;
+  editingCamp=camp ? {...camp} : null;
   const defTerm = camp ? camp.term : (camps.length ? Math.max(...camps.map(c => c.term))+1 : 1);
   const skips = new Set(camp ? camp.skips || [] : []);
   const chips = Array.from({length:12}, (_,i) => i+1).map(n =>
@@ -526,10 +515,10 @@ function openForm(term){
         <div class="f-hint">遇到五一、十一、春节等长假时，点选碰上假期的课程周：该周变为休息周，课程整体顺延一周。正常情况不用选。</div>
       </div>
       <div class="modal-acts">
-        ${camp ? `<button class="btn danger" onclick="deleteCamp(${camp.term})">删除本期</button>` : ''}
+        ${camp ? `<button data-write class="btn danger" onclick="deleteCamp(${camp.term})">删除本期</button>` : ''}
         <div class="spacer"></div>
         <button class="btn ghost" onclick="closeForm()">取消</button>
-        <button class="btn primary" onclick="saveForm(${camp ? camp.term : 'null'})">保存</button>
+        <button data-write class="btn primary" onclick="saveForm(${camp ? camp.term : 'null'})">保存</button>
       </div>
     </div>
   </div>`;
@@ -544,40 +533,107 @@ function updateDayHint(v){
   el.textContent = dayHintText(v);
   el.className = 'f-hint' + (v && parseD(v).getDay() !== 0 ? ' warn' : '');
 }
-function closeForm(){ document.getElementById('modal-root').innerHTML = ''; }
+function closeForm(){ document.getElementById('modal-root').innerHTML = ''; editingCamp=null; }
 
-function saveForm(origTerm){
-  const term = parseInt(document.getElementById('f-term').value);
-  const date = document.getElementById('f-date').value;
-  if(!(term >= 1)){ alert('请填写期数'); return; }
-  if(!date){ alert('请选择开营日期'); return; }
-  if(camps.some(c => c.term === term && c.term !== origTerm)){ alert(`第 ${term} 期已存在`); return; }
-  const skips = [...document.querySelectorAll('#f-skips .skipchip.on')].map(b => parseInt(b.dataset.n));
-  const entry = { term, openDate: date, skips };
-  if(origTerm != null){
-    camps = camps.map(c => c.term === origTerm ? entry : c);
-    if(origTerm !== term){ viewState[term] = viewState[origTerm]; delete viewState[origTerm]; }
-  } else {
-    camps.push(entry);
-  }
-  persist(); closeForm(); render();
+async function saveForm(origTerm){
+  if(!editable()) return;
+  const entry = { term:Number(document.getElementById('f-term').value), openDate:document.getElementById('f-date').value,
+    skips:[...document.querySelectorAll('#f-skips .skipchip.on')].map(b => Number(b.dataset.n)) };
+  try{
+    await cloud.save(entry, editingCamp);
+    if(origTerm != null && origTerm !== entry.term){ viewState[entry.term]=viewState[origTerm]; delete viewState[origTerm]; }
+    closeForm(); render(); report('已保存到团队排期。');
+  }catch(error){ writeError(error); }
 }
-function deleteCamp(term){
-  if(!confirm(`确定删除第 ${term} 期吗？`)) return;
-  camps = camps.filter(c => c.term !== term);
-  delete viewState[term];
-  persist(); closeForm(); render();
+async function deleteCamp(term){
+  if(!editable()) return;
+  const camp=editingCamp && editingCamp.term===term ? editingCamp : camps.find(c => c.term===term);
+  if(!camp || !confirm(`确定从团队排期中删除第 ${term} 期吗？所有成员都会看到这次变更。`)) return;
+  try{ await cloud.remove(camp); delete viewState[term]; closeForm(); render(); report('已从团队排期中删除。'); }
+  catch(error){ writeError(error); }
 }
-
 function copyLink(){
-  navigator.clipboard.writeText(location.href).then(() => {
-    const b = document.getElementById('copybtn');
-    if(b){ b.textContent = '已复制 ✓'; setTimeout(() => { b.textContent = '复制分享链接'; }, 1500); }
-  }).catch(() => prompt('复制下面的链接：', location.href));
+  const url=location.origin+location.pathname;
+  navigator.clipboard.writeText(url).then(() => report('已复制。团队成员打开同一个链接即可查看最新排期。'))
+    .catch(() => prompt('复制团队排期链接',url));
+}
+function renderGate(){
+  const state=cloud ? cloud.state : {phase:'blocked',error:'页面服务未加载成功，请刷新重试。'};
+  const title=document.title;
+  document.getElementById('root').innerHTML=`<div class="auth-card"><h1>${esc(title)}</h1>
+    <p>团队共用一份排期和任务进度，登录后查看。</p>
+    ${state.phase==='loading' ? '<p role="status">正在连接团队排期…</p>' : state.phase==='login' ? `
+      <form onsubmit="login(event)">
+        <label for="login-email">邮箱</label><input class="f-input" id="login-email" name="email" type="email" autocomplete="username" required>
+        <label for="login-password">密码</label><input class="f-input" id="login-password" name="password" type="password" autocomplete="current-password" required>
+        <div class="auth-error" id="login-error" role="alert">${esc(state.error)}</div>
+        <button class="btn primary" id="login-submit" type="submit">登录</button>
+      </form><div class="auth-help">沿用 Skill 市集和运营分析系统的账号。<br>还没有账号？先到 <a href="/skill-hub/index.html#/register">Skill 市集注册</a>，再请运营团队成员添加权限。</div>` : `
+      <p role="alert">${esc(state.error)}</p><button class="btn primary" onclick="cloud.refresh()">重新连接</button>
+      ${state.user ? '<button class="btn ghost" onclick="logout()">切换账号</button>' : '<button class="btn ghost" onclick="location.reload()">刷新页面</button>'}`}
+    <div class="auth-help">本机旧排期仍保留，登录后可以选择导入。</div></div>`;
+}
+async function login(event){
+  event.preventDefault();
+  const email=document.getElementById('login-email').value,password=document.getElementById('login-password').value;
+  const button=document.getElementById('login-submit');button.disabled=true;button.textContent='正在登录…';
+  try{ await cloud.signIn(email,password); }
+  catch(error){ const el=document.getElementById('login-error');if(el)el.textContent=error.message;else writeError(error); }
+  finally{ const el=document.getElementById('login-submit');if(el){el.disabled=false;el.textContent='登录';} }
+}
+async function logout(){ try{ await cloud.signOut(); }catch(error){writeError(error);} }
+function syncBar(){
+  const s=cloud.state;
+  const state=s.busy ? '正在保存…' : !s.online ? '连接中断' : s.realtime ? '云端已同步 · 实时更新' : '云端已同步 · 每 15 秒检查更新';
+  const stamp=s.lastSync ? s.lastSync.toLocaleTimeString('zh-CN',{hour12:false}) : '';
+  return `<div class="syncbar${s.online?'':' offline'}"><div class="sync-text"><strong>${state}</strong>
+    ${!s.online ? '<br>显示上次读取的排期，恢复连接后才能保存。' : `<br>所有成员共用排期和完成进度${stamp ? ' · 最近读取 '+stamp : ''}`}</div>
+    <span>${esc(s.user.email)}</span><button class="btn ghost" onclick="cloud.refresh()" ${s.busy?'disabled':''}>刷新</button>
+    ${(legacy.local.length || legacy.shared.length || legacy.warning) ? '<button class="btn ghost" data-write onclick="openImport()">导入旧排期</button>' : ''}
+    <a class="btn ghost" href="/camp-review/index.html#/members">成员权限</a><button class="btn ghost" onclick="logout()">退出</button></div>`;
+}
+function openImport(source){
+  if(!editable()) return;
+  source=source || (legacy.local.length?'local':'shared');
+  const list=legacy[source];
+  document.getElementById('modal-root').innerHTML=`<div class="overlay" onclick="if(event.target===this)closeForm()"><div class="modal">
+    <div class="modal-title">把旧排期导入团队</div><div class="import-note">只新增团队里还没有的期数。同一期已经存在时会跳过，保留团队当前的日期和进度。本机原始数据不会删除。</div>
+    <div class="modal-acts">
+      ${legacy.local.length?`<button class="btn ${source==='local'?'primary':'ghost'}" onclick="openImport('local')">本机排期 · ${legacy.local.length} 期</button>`:''}
+      ${legacy.shared.length?`<button class="btn ${source==='shared'?'primary':'ghost'}" onclick="openImport('shared')">旧链接 · ${legacy.shared.length} 期</button>`:''}
+    </div><div class="import-list">${list.map(c=>`<div>第 ${c.term} 期 · ${c.openDate} 开营${c.skips.length ? ' · 休息周 '+c.skips.join('、'):''}</div>`).join('') || '没有可直接导入的记录'}</div>
+    <div class="import-note">${source==='local'?'本机已有的任务勾选会随新增营期一起导入。':'旧链接只携带排期。只有与本机排期完全一致的营期，才会带入本机勾选。'}${legacy.warning?'<br>'+esc(legacy.warning):''}</div>
+    <div class="modal-acts"><button class="btn ghost" onclick="downloadLegacy()">下载旧数据备份</button><div class="spacer"></div><button class="btn ghost" onclick="closeForm()">取消</button>
+    <button class="btn primary" data-write onclick="importLegacy('${source}')" ${list.length?'':'disabled data-unavailable'}>导入到团队排期</button></div>
+    </div></div>`;
+}
+function legacyEntries(source){
+  return legacy[source].map(c => {
+    const same=legacy.local.some(local => JSON.stringify(local)===JSON.stringify(c));
+    const keys=(source==='local' || same) ? campWeeks(c).flatMap(w => weekTasks(w)
+      .filter(t => legacy.done[`${c.term}|${w.label}|${t.day}|${t.t}`])
+      .map(t => `${w.key}|${t.day}|${t.t}`)) : [];
+    return {term:c.term,open_date:c.openDate,skips:c.skips,completed_tasks:[...new Set(keys)]};
+  });
+}
+async function importLegacy(source){
+  if(!editable()) return;
+  try{
+    const result=await cloud.importCamps(legacyEntries(source));closeForm();
+    report(`已导入 ${result.inserted.length} 期${result.skipped.length ? '，第 '+result.skipped.join('、')+' 期已在团队排期中，保留现有内容' : ''}。本机旧数据仍保留。`);
+  }catch(error){writeError(error);}
+}
+function downloadLegacy(){
+  try{
+    const data={program:window.SCHEDULE_CONFIG.program,camps:localStorage.getItem(LS_KEY),done:localStorage.getItem(DONE_KEY),shared:legacy.shared};
+    const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
+    const a=document.createElement('a');a.href=url;a.download=window.SCHEDULE_CONFIG.program+'-schedule-backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }catch(error){report('无法读取本机备份，请检查浏览器的存储权限。');}
 }
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 function render(){
+  if(!cloud || cloud.state.phase!=='ready'){renderGate();return;}
   REG = [];
   const today = new Date();
   const sorted = [...camps].sort((a,b) => parseD(a.openDate) - parseD(b.openDate));
@@ -609,8 +665,8 @@ function render(){
     <div class="sec-row"><div class="sec-title">各营期本周工作</div></div>
     <div class="camps">${cards.map(c => campCard(c.camp, today)).join('')}</div>
   ` : `
-    <div class="empty">还没有营期数据<br>点击下方按钮，输入开营日期即可生成整期排期
-      <br><button class="btn primary" onclick="openForm(null)">＋ 添加第一期</button>
+    <div class="empty">团队还没有营期数据<br>可以添加营期，也可以通过上方的「导入旧排期」带入本机记录
+      <br><button data-write class="btn primary" onclick="openForm(null)">＋ 添加第一期</button>
     </div>`;
 
   document.getElementById('root').innerHTML = `
@@ -621,9 +677,10 @@ function render(){
       </div>
       <div class="sec-actions">
         <button class="btn ghost" id="copybtn" onclick="copyLink()">复制分享链接</button>
-        <button class="btn primary" onclick="openForm(null)">＋ 添加营期</button>
+        <button data-write class="btn primary" onclick="openForm(null)">＋ 添加营期</button>
       </div>
     </div>
+    ${syncBar()}
     <div class="legend">
       <div class="leg-item"><div class="leg-dot" style="background:var(--open-bg)"></div>开营周</div>
       <div class="leg-item"><div class="leg-dot" style="background:var(--regular-bg)"></div>常规周</div>
@@ -632,8 +689,28 @@ function render(){
       <div class="leg-item"><div class="leg-dot" style="background:var(--rest-bg)"></div>休息周（长假）</div>
     </div>
     <div class="wrap">${body}</div>`;
+  document.querySelectorAll('[data-write]').forEach(button=>{button.disabled=!editable() || button.hasAttribute('data-unavailable');});
 }
-render();
+function bootCloud(){
+  if(!window.supabase || !window.ScheduleCloud){renderGate();return;}
+  try{legacy=ScheduleCloud.readLegacy(localStorage,location.hash,LS_KEY,DONE_KEY);}catch(_){legacy.warning='浏览器未允许读取本机数据。';}
+  const config=window.SCHEDULE_CONFIG;
+  const client=window.supabase.createClient(config.url,config.key,{auth:{detectSessionInUrl:false}});
+  cloud=new ScheduleCloud.Store(client,config.program,state=>{
+    camps=state.camps;done={};
+    for(const [id,task] of Object.entries(state.tasks))if(task.completed)done[id]=1;
+    if(state.phase!=='ready')closeForm();
+    render();
+    document.querySelectorAll('[data-write]').forEach(button=>{button.disabled=!editable() || button.hasAttribute('data-unavailable');});
+  });
+  cloud.start();
+  window.addEventListener('online',()=>cloud.refresh());
+  window.addEventListener('offline',()=>{cloud.state.online=false;cloud.emit();});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)cloud.refresh();});
+  window.addEventListener('pagehide',()=>cloud.stop());
+  window.addEventListener('pageshow',event=>{if(event.persisted)location.reload();});
+}
+bootCloud();
 </script>
 </body>
 </html>
