@@ -50,3 +50,8 @@ sales-script/tests/*
 !sales-script/tests/assistant-ui.test.js
 !sales-script/tests/ai-log-delete.test.js
 !sales-script/tests/reply-content.test.js
+
+# Generated Python bytecode is never a deployment input.
+__pycache__/
+*.pyc
+camp-schedule/node_modules/
