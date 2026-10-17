@@ -6,6 +6,7 @@ test('safe return URLs and access decisions',()=>{
  assert.equal(common.safeNext('//evil.example','https://internal.example'),'/');
  assert.equal(common.safeNext('/ai-camp-schedule/#1:2030-01-01','https://internal.example'),'/ai-camp-schedule/#1:2030-01-01');
  assert.equal(common.safeNext('/access/login.html','https://internal.example'),'/');
+ assert.equal(common.safeNext('/access/admin.html','https://internal.example'),'/access/admin.html');
  assert.equal(common.permits({allowed:true,role:'staff',apps:['ai']},'ai'),true);
  assert.equal(common.permits({allowed:true,role:'analyst',apps:['ai']},'admin'),false);
  assert.equal(common.permits({allowed:false,role:'admin',apps:['ai']},'ai'),false);

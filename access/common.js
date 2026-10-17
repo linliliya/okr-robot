@@ -1,7 +1,7 @@
 (function(root){
   'use strict';
   function safeNext(value, origin) {
-    try { const u=new URL(value || '/',origin); return u.origin===origin && !u.pathname.startsWith('/access/') ? u.pathname+u.search+u.hash : '/'; }
+    try { const u=new URL(value || '/',origin); return u.origin===origin && (!u.pathname.startsWith('/access/') || u.pathname==='/access/admin.html') ? u.pathname+u.search+u.hash : '/'; }
     catch(_){ return '/'; }
   }
   function permits(access, app){return !!(access && access.allowed && (app==='portal' || (app==='admin' ? access.role==='admin' : access.apps.includes(app))));}
