@@ -11,6 +11,7 @@ const $app = document.getElementById("app");
 let me = null;          // 当前登录用户 { id, email, profile }
 let listState = { q: "", category: "", role: "", source: "all", sort: "new" };
 let skillCache = [];
+const readmeRequests = new Map();
 
 // ---------- 小工具 ----------
 const esc = s => String(s ?? "").replace(/[&<>"']/g,
@@ -59,7 +60,73 @@ function errorMessage(error) {
 }
 
 function showError(error) {
+  cancelReadmeReads();
   $app.innerHTML = `<a class="backlink" href="#/">← 返回市集</a><div class="empty" role="alert">${esc(errorMessage(error))}</div>`;
+}
+
+function cancelReadmeReads() {
+  for (const cancel of readmeRequests.values()) cancel();
+  readmeRequests.clear();
+}
+
+function readmeHTML(skill, open = false) {
+  return `<details class="readme-section" data-readme-slug="${esc(skill.slug)}" ${open ? "open" : ""}>
+    <summary><span>README 项目说明</span><span class="readme-expand">查看 README ↓</span><span class="readme-collapse">收起 ↑</span></summary>
+    <div class="readme-content" aria-live="polite"><p class="readme-status">展开后读取原项目的说明。</p></div>
+  </details>`;
+}
+
+function readmeErrorMessage(error) {
+  const messages = {
+    UNSUPPORTED_SOURCE: "这个来源暂时无法直接读取 README，可以前往原项目查看。",
+    NOT_FOUND: "暂时没有找到可读取的项目说明，可以前往原项目查看。",
+    NO_README: "这个项目暂时没有 README 或 SKILL.md，可以前往原项目查看。",
+    RATE_LIMIT: "GitHub 暂时限制了读取请求，请稍后重试，或直接查看原项目。",
+    TIMEOUT: "读取项目说明超时，请重试，或直接查看原项目。",
+    NETWORK_ERROR: "暂时连不上 GitHub，请重试，或直接查看原项目。",
+    FILE_TOO_LARGE: "这份说明比较长，请前往原项目查看完整内容。",
+    RESPONSE_TOO_LARGE: "项目返回的内容过大，请前往原项目查看。"
+  };
+  return messages[error?.code] || "暂时无法读取项目说明，请重试，或直接查看原项目。";
+}
+
+function bindReadmes(skills) {
+  const bySlug = new Map(skills.map(skill => [skill.slug, skill]));
+  $app.querySelectorAll("[data-readme-slug]").forEach(panel => {
+    const skill = bySlug.get(panel.dataset.readmeSlug);
+    if (!skill || H.sourceType(skill) !== "external") return;
+    const content = panel.querySelector(".readme-content");
+    let loaded = false, controller = null, generation = 0;
+    const stop = () => { generation++; controller?.abort(); controller = null; readmeRequests.delete(panel); };
+    const active = token => generation === token && panel.open && $app.contains(panel);
+    async function load() {
+      if (loaded || controller || !panel.open) return;
+      controller = new AbortController();
+      const token = ++generation;
+      readmeRequests.set(panel, stop);
+      content.innerHTML = `<p class="readme-status" role="status">正在读取项目说明…</p>`;
+      try {
+        if (!window.SkillHubImporter?.readReadme || !window.SkillHubReadme) throw new Error("README reader unavailable");
+        const result = await window.SkillHubImporter.readReadme(skill, { signal: controller.signal });
+        if (!active(token)) return;
+        const rendered = window.SkillHubReadme.render(result, { marked: window.marked, DOMPurify: window.DOMPurify, document });
+        const original = H.safeUrl(result.url);
+        const note = result.kind === "skill" ? "此项目未提供 README，以下展示 SKILL.md。"
+          : result.scope === "repository" ? "此 Skill 目录未提供 README，以下为整个仓库的说明。" : "";
+        content.innerHTML = `<div class="readme-meta"><span>${esc(result.path)}</span>${original ? `<a href="${esc(original)}" target="_blank" rel="noopener noreferrer">查看原文 ↗</a>` : ""}</div>${note ? `<p class="readme-note">${esc(note)}</p>` : ""}<div class="doc readme-document" tabindex="0" role="region" aria-label="项目说明正文">${rendered}</div>`;
+        loaded = true;
+      } catch (error) {
+        if (!active(token) || error?.name === "AbortError") return;
+        const source = H.safeUrl(skill.source_url);
+        content.innerHTML = `<p class="readme-status" role="status">${esc(readmeErrorMessage(error))}</p><div class="readme-actions"><button class="btn small ghost" type="button" data-readme-retry>重新读取</button>${source ? `<a href="${esc(source)}" target="_blank" rel="noopener noreferrer">查看原项目 ↗</a>` : ""}</div>`;
+        content.querySelector("[data-readme-retry]").onclick = () => load();
+      } finally {
+        if (generation === token) { controller = null; readmeRequests.delete(panel); }
+      }
+    }
+    panel.ontoggle = () => { if (panel.open) return load(); if (!loaded) stop(); };
+    if (panel.open) load();
+  });
 }
 
 async function copyText(text, message = "已复制") {
@@ -226,6 +293,7 @@ document.getElementById("nav-logout").onclick = async () => {
 
 // ---------- 路由 ----------
 async function route() {
+  cancelReadmeReads();
   try {
   if (!CONFIGURED) return viewSetupNote();
   await refreshUser();
@@ -323,6 +391,7 @@ async function viewList() {
 }
 
 function renderList() {
+  cancelReadmeReads();
   const { q, category, role, source, sort } = listState;
   const items = H.filterSkills(skillCache, listState);
   const sources = [["all", "全部来源"], ["upload", "内部上传"], ["external", "外部推荐"]];
@@ -364,12 +433,13 @@ function renderList() {
   $app.querySelectorAll("[data-sort]").forEach(b => b.onclick = () => { listState.sort = b.dataset.sort; renderList(); });
   $app.querySelectorAll("[data-cat]").forEach(b => b.onclick = () => { listState.category = b.dataset.cat; renderList(); });
   $app.querySelectorAll("[data-role]").forEach(b => b.onclick = () => { listState.role = b.dataset.role; renderList(); });
+  bindReadmes(items);
 }
 
 function cardHTML(s) {
   const external = H.sourceType(s) === "external";
   const tags = s.tags ? s.tags.split(/[,，\s]+/).filter(Boolean) : [];
-  return `<a class="card" href="#/skill/${encodeURIComponent(s.slug)}">
+  return `<article class="skill-card"><a class="card" href="#/skill/${encodeURIComponent(s.slug)}">
     <div class="card-top"><span class="source-badge ${external ? "external" : ""}">${external ? "外部推荐" : "内部上传"}</span>
       <span class="trial-status">${external ? s.tested ? "分享者已试用" : "尚未试用" : `${s.downloads || 0} 次下载`}</span></div>
     <div class="card-heading"><h3>${esc(H.getDisplayTitle(s))}</h3><div class="skill-original-name">${esc(s.title)}</div></div>
@@ -377,7 +447,7 @@ function cardHTML(s) {
     <div class="card-roles">${roleTagsHTML(s.roles)}</div>
     <div class="meta"><span class="tag">${esc(s.category)}</span>${tags.slice(0, 2).map(t => `<span>${esc(t)}</span>`).join("")}</div>
     <div class="card-bottom"><div class="meta"><span>${esc(s.author?.display_name || "同事")} ${external ? "推荐" : "分享"}</span><span>${fmtDate(s.updated_at)}</span></div><span class="card-action">${external ? "了解与安装" : "查看详情"} →</span></div>
-  </a>`;
+  </a>${external ? readmeHTML(s) : ""}</article>`;
 }
 
 function viewShare() {
@@ -391,6 +461,7 @@ function viewShare() {
 
 // ---------- 视图：详情 ----------
 async function viewDetail(slug) {
+  cancelReadmeReads();
   $app.innerHTML = `<div class="empty">加载中…</div>`;
   const { data: skill, error } = await sb.from("skills")
     .select("*, author:profiles(display_name, department)").eq("slug", slug).maybeSingle();
@@ -977,6 +1048,7 @@ function viewExternalDetail(skill) {
     </div>
     <div class="detail-layout">
       <div class="detail-main">
+        ${readmeHTML(skill, true)}
         <section class="detail-panel" id="installation"><h2>安装与使用</h2>
           ${installPrompt ? `<div class="install-step"><span class="step-number">1</span><div><h3>把安装请求发给 AI</h3><p>复制下面这段话，发到你常用的 AI 工具里，让它帮你安装。</p></div></div>
           <div class="install-prompt" id="install-prompt">${esc(installPrompt)}</div>
@@ -1007,6 +1079,7 @@ function viewExternalDetail(skill) {
   if (copy) copy.onclick = () => copyText(installPrompt, "已复制，发给 AI 就可以开始安装");
   bindRoleEditor(skill);
   bindTitleEditor(skill);
+  bindReadmes([skill]);
   const remove = document.getElementById("remove-recommendation");
   if (remove) remove.onclick = async () => {
     if (!await confirmAction("确定移除这条推荐吗？原项目和已安装的 Skill 不受影响。", "移除推荐")) return;

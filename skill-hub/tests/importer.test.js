@@ -2,7 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const vm = require("node:vm");
-const { inspect, readChoice } = require("../importer.js");
+const { inspect, readChoice, readReadme } = require("../importer.js");
 
 const REPO = "example/toolbox";
 const base = `/repos/${REPO}`;
@@ -298,4 +298,272 @@ test("browser global loads without Node and enforces its overall timeout", async
   assert.equal(timers[0].duration, 15000);
   timers[0].callback();
   await assert.rejects(pending, { code: "TIMEOUT" });
+});
+
+const directoryEntry = (name, directory = "skills/pdf", extra = {}) => ({
+  name, path: directory === "." ? name : `${directory}/${name}`, type: "file", ...extra,
+});
+const savedSkill = (directory = "skills/pdf", ref = "main") => ({
+  source_url: url(`/tree/${ref}${directory === "." ? "" : `/${directory}`}`), source_path: directory,
+  title: "original-name", source_type: "external",
+});
+function readmeRoutes(directory, names, extra = {}, ref = "main") {
+  return {
+    [`${base}/git/trees/${encodeURIComponent(ref)}`]: { tree: [] },
+    [`${base}/contents/${directory === "." ? "" : directory}?ref=${encodeURIComponent(ref)}`]: names.map(name => directoryEntry(name, directory)),
+    ...extra,
+  };
+}
+
+test("README uses the exact Skill directory and a Chinese document before the default README", async () => {
+  const api = mock(readmeRoutes("skills/pdf", ["README.md", "README.zh-CN.md", "SKILL.md"], {
+    [`${base}/contents/skills/pdf/README.zh-CN.md?ref=main`]: skill("# PDF 使用说明\n[示例](examples/basic.md)"),
+  }));
+  const result = await readReadme(savedSkill(), api);
+  assert.deepEqual(result, {
+    markdown: "# PDF 使用说明\n[示例](examples/basic.md)", path: "skills/pdf/README.zh-CN.md",
+    url: url("/blob/main/skills/pdf/README.zh-CN.md"), kind: "readme", scope: "skill", repo: REPO, ref: "main",
+  });
+  assert.equal(api.calls.some(path => path.includes("recursive=1")), false);
+  assert.equal(api.calls.some(path => path.endsWith("/README.md?ref=main")), false);
+  assert.equal(api.calls.length, 3);
+  assert.deepEqual(await readReadme(savedSkill(), api), result);
+  assert.equal(api.calls.length, 3, "successful document reads share the bounded cache");
+});
+
+test("README filename matching is case insensitive and recognizes common Chinese names", async () => {
+  for (const name of ["readme.md", "ReadMe.MD", "README_CN.md", "README_zh_CN.md", "README.zh.md", "README.zh-Hans.md", "README.中文.md", "README.markdown", "README"]) {
+    const api = mock(readmeRoutes("skills/pdf", [name, "README.en.md"], {
+      [`${base}/contents/skills/pdf/${encodeURIComponent(name)}?ref=main`]: skill(`Document ${name}`),
+    }));
+    assert.equal((await readReadme(savedSkill(), api)).path, `skills/pdf/${name}`);
+  }
+});
+
+test("README falls back to repository documentation and labels its scope", async () => {
+  const api = mock(readmeRoutes("skills/pdf", ["SKILL.md"], {
+    [`${base}/contents/?ref=main`]: [directoryEntry("README.md", "."), directoryEntry("README_CN.md", ".")],
+    [`${base}/contents/README_CN.md?ref=main`]: skill("# 仓库说明\n仓库里有多个 Skill。"),
+  }));
+  const result = await readReadme(savedSkill(), api);
+  assert.equal(result.scope, "repository");
+  assert.equal(result.kind, "readme");
+  assert.equal(result.path, "README_CN.md");
+  assert.equal(result.url, url("/blob/main/README_CN.md"));
+  assert.equal(api.calls.length, 4);
+});
+
+test("a root Skill reads its root README once and still identifies it as Skill documentation", async () => {
+  const api = mock(readmeRoutes(".", ["README.md"], { [`${base}/contents/README.md?ref=main`]: skill("# Root README") }));
+  const result = await readReadme(savedSkill("."), api);
+  assert.equal(result.scope, "skill");
+  assert.equal(result.path, "README.md");
+  assert.equal(api.calls.filter(path => path.includes("/contents/?")).length, 1);
+});
+
+test("missing directory and repository READMEs fall back only to the current SKILL.md", async () => {
+  const content = markdown("original-name");
+  const api = mock(readmeRoutes("skills/pdf", ["SKILL.md", "readme.pdf"], {
+    [`${base}/contents/?ref=main`]: [directoryEntry("other", ".", { type: "dir" })],
+    [`${base}/contents/skills/pdf/SKILL.md?ref=main`]: skill(content),
+  }));
+  const result = await readReadme(savedSkill(), api);
+  assert.equal(result.markdown, content);
+  assert.equal(result.kind, "skill");
+  assert.equal(result.scope, "skill");
+  assert.equal(result.url, url("/blob/main/skills/pdf/SKILL.md"));
+  assert.equal(api.calls.some(path => path.includes("other/") || path.includes("readme.pdf")), false);
+});
+
+test("a source without any README or SKILL.md reports missing documentation", async () => {
+  const api = mock(readmeRoutes("skills/pdf", [], { [`${base}/contents/?ref=main`]: [] }));
+  await assert.rejects(readReadme(savedSkill(), api), { code: "NOT_FOUND" });
+  assert.equal(api.calls.at(-1), `${base}/contents/skills/pdf/SKILL.md?ref=main`);
+});
+
+test("a missing Skill directory is not silently replaced with the repository README", async () => {
+  const api = mock(readmeRoutes("skills/pdf", [], {
+    [`${base}/contents/skills/pdf?ref=main`]: 404,
+    [`${base}/contents/?ref=main`]: [directoryEntry("README.md", ".")],
+  }));
+  await assert.rejects(readReadme(savedSkill(), api), { code: "NOT_FOUND" });
+  assert.equal(api.calls.includes(`${base}/contents/?ref=main`), false);
+});
+
+test("README preserves an explicit slash-containing ref even when a longer competing branch exists", async () => {
+  const api = mock(readmeRoutes("skills/pdf", ["README.md"], {
+    [`${base}/git/trees/release%2F2026%2Fskills`]: { tree: [] },
+    [`${base}/contents/skills/pdf/README.md?ref=release%2F2026`]: skill("# Release documentation"),
+  }, "release/2026"));
+  const result = await readReadme(savedSkill("skills/pdf", "release/2026"), api);
+  assert.equal(result.ref, "release/2026");
+  assert.equal(result.path, "skills/pdf/README.md");
+  assert.equal(result.url, url("/blob/release/2026/skills/pdf/README.md"));
+  assert.equal(api.calls.includes(`${base}/git/trees/release%2F2026%2Fskills`), false);
+});
+
+test("README resolves a slash-containing ref when no saved directory is available", async () => {
+  const api = mock(readmeRoutes("skills/pdf", ["README.md"], {
+    [`${base}/contents/skills/pdf/README.md?ref=release%2F2026`]: skill("# Exact branch"),
+  }, "release/2026"));
+  const result = await readReadme({ source_url: url("/blob/release/2026/skills/pdf/SKILL.md") }, api);
+  assert.equal(result.ref, "release/2026");
+  assert.equal(result.path, "skills/pdf/README.md");
+  assert.equal(api.calls.includes(`${base}/git/trees/release`), false);
+});
+
+test("README encodes Chinese directory and document paths without trusting remote URLs", async () => {
+  const directory = "技能/销售 助手";
+  const encoded = directory.split("/").map(encodeURIComponent).join("/");
+  const name = "README.中文.md";
+  const api = mock({
+    [`${base}/git/trees/main`]: { tree: [] },
+    [`${base}/contents/${encoded}?ref=main`]: [directoryEntry(name, directory)],
+    [`${base}/contents/${encoded}/${encodeURIComponent(name)}?ref=main`]: skill("# 使用说明", {
+      path: `${directory}/${name}`, html_url: "https://evil.example/redirect", download_url: "https://evil.example/content",
+    }),
+  });
+  const result = await readReadme({ source_url: url(`/tree/main/${encoded}`), source_path: directory }, api);
+  assert.equal(result.path, `${directory}/${name}`);
+  assert.equal(result.url, url(`/blob/main/${encoded}/${encodeURIComponent(name)}`));
+});
+
+test("skills.sh README lookup locates the exact Skill and uses its verified GitHub directory", async () => {
+  const api = mock(routes(["tools/lookup/SKILL.md", "other/SKILL.md"], {
+    [`${base}/contents/tools/lookup/SKILL.md?ref=main`]: skill(markdown("research")),
+    [`${base}/contents/other/SKILL.md?ref=main`]: skill(markdown("other")),
+    [`${base}/contents/tools/lookup?ref=main`]: [directoryEntry("README.md", "tools/lookup")],
+    [`${base}/contents/tools/lookup/README.md?ref=main`]: skill("# Research guide"),
+  }));
+  const result = await readReadme({ source_url: `https://skills.sh/${REPO}/research` }, api);
+  assert.equal(result.path, "tools/lookup/README.md");
+  assert.equal(result.ref, "main");
+  assert.equal(result.repo, REPO);
+});
+
+test("repository README lookup requires an exact directory or a uniquely located Skill", async () => {
+  const api = mock(routes(["a/SKILL.md", "b/SKILL.md"], {
+    [`${base}/contents/b?ref=main`]: [directoryEntry("README.md", "b")],
+    [`${base}/contents/b/README.md?ref=main`]: skill("# B guide"),
+  }));
+  await assert.rejects(readReadme({ source_url: url() }, api), { code: "SKILL_NOT_LOCATED" });
+  assert.equal(api.calls.some(path => path.includes("/contents/")), false);
+  assert.equal((await readReadme({ source_url: url(), source_path: "b" }, api)).path, "b/README.md");
+});
+
+test("README rejects unsupported or inconsistent sources before making requests", async () => {
+  const api = mock({});
+  for (const item of [null, {}, { source_url: "https://example.com/skill" }, { source_url: "javascript:alert(1)" },
+    { source_url: url("/tree/main/a"), source_path: "b" }, { source_url: url("/tree/main/a"), source_path: "../a" }]) {
+    await assert.rejects(readReadme(item, api));
+  }
+  assert.equal(api.calls.length, 0);
+});
+
+test("README content errors, rate limiting, and server errors never fall back to unrelated documentation", async () => {
+  for (const status of [403, 429, 500]) {
+    const api = mock(readmeRoutes("skills/pdf", ["README.md"], {
+      [`${base}/contents/skills/pdf/README.md?ref=main`]: status,
+    }));
+    await assert.rejects(readReadme(savedSkill(), api), { code: status === 500 ? "REMOTE_ERROR" : "RATE_LIMIT" });
+    assert.equal(api.calls.includes(`${base}/contents/?ref=main`), false);
+  }
+  for (const [data, code] of [
+    [skill("# Too large", { size: 262145 }), "FILE_TOO_LARGE"],
+    [skill("x".repeat(262145), { size: 1 }), "FILE_TOO_LARGE"],
+    [skill("# README", { encoding: "none" }), "INVALID_DOCUMENT"],
+    [skill("# README", { type: "symlink" }), "INVALID_DOCUMENT"],
+    [skill("# README", { content: "@@invalid@@" }), "INVALID_ENCODING"],
+    [skill("# README", { path: "another/README.md" }), "INVALID_DOCUMENT"],
+  ]) {
+    const api = mock(readmeRoutes("skills/pdf", ["README.md"], { [`${base}/contents/skills/pdf/README.md?ref=main`]: data }));
+    await assert.rejects(readReadme(savedSkill(), api), { code });
+    assert.equal(api.calls.includes(`${base}/contents/?ref=main`), false);
+  }
+});
+
+test("README ignores directory entries with foreign paths, symlinks, and unsupported filenames", async () => {
+  const api = mock(readmeRoutes("skills/pdf", [], {
+    [`${base}/contents/skills/pdf?ref=main`]: [
+      directoryEntry("README.md", "other"), directoryEntry("README_CN.md", "skills/pdf", { type: "symlink" }),
+      directoryEntry("README.html"), directoryEntry("README.js"), directoryEntry("README.pdf"),
+    ],
+    [`${base}/contents/?ref=main`]: [],
+    [`${base}/contents/skills/pdf/SKILL.md?ref=main`]: skill(markdown("original-name")),
+  }));
+  assert.equal((await readReadme(savedSkill(), api)).kind, "skill");
+  assert.equal(api.calls.some(path => /README/.test(path)), false);
+});
+
+test("README cancellation aborts the active request and cached results still honor an aborted signal", async () => {
+  const controller = new AbortController();
+  let pendingSignal;
+  const pending = readReadme(savedSkill(), { signal: controller.signal, fetchImpl: async (_url, options) => {
+    pendingSignal = options.signal;
+    return new Promise(() => {});
+  } });
+  await Promise.resolve();
+  controller.abort();
+  await assert.rejects(pending, { name: "AbortError" });
+  assert.equal(pendingSignal.aborted, true);
+  const api = mock(readmeRoutes("skills/pdf", ["README.md"], { [`${base}/contents/skills/pdf/README.md?ref=main`]: skill("# Cached") }));
+  await readReadme(savedSkill(), api);
+  await assert.rejects(readReadme(savedSkill(), { ...api, signal: controller.signal }), { name: "AbortError" });
+  assert.equal(api.calls.length, 3);
+});
+
+test("README shares the overall 15 second timeout even when a fetch ignores cancellation", async () => {
+  const timers = [];
+  const context = vm.createContext({
+    window: { SkillHub: require("../shared.js") }, URL, AbortController, TextDecoder, TextEncoder, Uint8Array, atob,
+    setTimeout(callback, duration) { timers.push({ callback, duration }); return 1; }, clearTimeout() {},
+  });
+  vm.runInContext(fs.readFileSync(require.resolve("../importer.js"), "utf8"), context);
+  const pending = context.window.SkillHubImporter.readReadme(savedSkill(), { fetchImpl: async () => new Promise(() => {}) });
+  assert.equal(timers.length, 1);
+  assert.equal(timers[0].duration, 15000);
+  timers[0].callback();
+  await assert.rejects(pending, { code: "TIMEOUT" });
+});
+
+test("README lookup honors the shared request budget when listed documents have disappeared", async () => {
+  const names = Array.from({ length: 30 }, (_, i) => `README.a${String.fromCharCode(97 + Math.floor(i / 26))}${String.fromCharCode(97 + i % 26)}.md`);
+  const api = mock(readmeRoutes("skills/pdf", names));
+  await assert.rejects(readReadme(savedSkill(), api), { code: "REQUEST_LIMIT" });
+  assert.equal(api.calls.length, 24);
+  assert.equal(api.calls.some(path => path.includes("recursive=1")), false);
+});
+
+test("a missing preferred Chinese README permits the next document in the same directory", async () => {
+  const api = mock(readmeRoutes("skills/pdf", ["README_CN.md", "README.md"], {
+    [`${base}/contents/skills/pdf/README.md?ref=main`]: skill("# Still available"),
+  }));
+  assert.equal((await readReadme(savedSkill(), api)).path, "skills/pdf/README.md");
+  assert.equal(api.calls.includes(`${base}/contents/?ref=main`), false);
+});
+
+test("a root Skill falls back to its SKILL.md without reading the same directory again", async () => {
+  const api = mock(readmeRoutes(".", ["SKILL.md"], { [`${base}/contents/SKILL.md?ref=main`]: skill(markdown("root")) }));
+  const result = await readReadme(savedSkill("."), api);
+  assert.equal(result.kind, "skill");
+  assert.equal(result.scope, "skill");
+  assert.equal(result.path, "SKILL.md");
+  assert.equal(api.calls.length, 3);
+});
+
+test("ambiguous skills.sh matches cannot select the first matching README", async () => {
+  const api = mock(routes(["one/research/SKILL.md", "two/research/SKILL.md"], {
+    [`${base}/contents/one/research/SKILL.md?ref=main`]: skill(markdown("research")),
+    [`${base}/contents/two/research/SKILL.md?ref=main`]: skill(markdown("research")),
+  }));
+  await assert.rejects(readReadme({ source_url: `https://skills.sh/${REPO}/research` }, api), { code: "SKILL_NOT_LOCATED" });
+  assert.equal(api.calls.some(path => /README/.test(path)), false);
+});
+
+test("README accepts exactly 256 KiB and returns remote text without executing it", async () => {
+  const remoteText = "<script>globalThis.readmeExecuted = true</script>\n";
+  const content = remoteText + "x".repeat(262144 - Buffer.byteLength(remoteText));
+  const api = mock(readmeRoutes("skills/pdf", ["README.md"], { [`${base}/contents/skills/pdf/README.md?ref=main`]: skill(content) }));
+  assert.equal((await readReadme(savedSkill(), api)).markdown, content);
+  assert.equal(globalThis.readmeExecuted, undefined);
 });

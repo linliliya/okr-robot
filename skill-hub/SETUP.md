@@ -51,6 +51,16 @@ Skill 市集使用 Supabase 保存账号、Skill 信息和上传的 ZIP 文件�
 
 更新内部 Skill 时，从它的详情页选择「上传新版本」。从分享入口上传会创建独立条目，同名文件也不会自动合并。外部推荐使用单独的来源标识去重，避免把不同作者的同名作品合并成一个条目。
 
+## 外部 Skill 的项目说明
+
+首页的外部 Skill 卡片支持展开 README，展开后卡片占满一行，长文可以滚动阅读。外部详情页也会自动读取项目说明。首页收起的卡片不发起读取请求。
+
+页面优先读取 Skill 所在目录的 README，有中文版本时优先展示中文；目录没有 README 时查找仓库 README，并标明它是整个仓库的说明。如果两处都没有，再展示该 Skill 的 `SKILL.md`。已有外部条目直接使用保存的来源链接，无需重新分享或升级数据库。
+
+读取支持公开 GitHub 项目，以及能够定位到 GitHub 目录的 skills.sh 链接。私有项目、其他来源、限流或网络错误会显示查看原项目的入口，也可以重试。单份说明最多读取 256 KB，短时间内重复查看会复用缓存。
+
+Markdown 中的标题、列表、表格、代码和图片会保留，相对链接按原文件的位置处理。展示前会移除脚本、内联样式和表单等内容。项目说明按需读取，不写入数据库，不会改变简介、原始名称或安装请求。
+
 ## 功能标题与原始名称
 
 卡片和详情页的主标题说明 Skill 能完成什么工作，例如「生成读书感悟朋友圈」。原始名称 `book-insights` 放在副标题中。搜索同时匹配功能标题和原始名称，安装请求继续使用原始名称与来源链接。
@@ -86,6 +96,16 @@ python3 -m http.server 8765 --bind 127.0.0.1 --directory skill-hub
 ```sh
 node --test skill-hub/tests/*.test.js
 ```
+
+README 渲染测试还需要与页面版本一致的 `marked`、`DOMPurify` 和测试用的 `jsdom`。可安装到临时目录，不改动网站的部署依赖：
+
+```sh
+readme_test_dir=$(mktemp -d)
+npm install --prefix "$readme_test_dir" --no-save --package-lock=false marked@12.0.2 dompurify@3.1.5 jsdom@26.1.0
+NODE_PATH="$readme_test_dir/node_modules" node --test skill-hub/tests/*.test.js
+```
+
+未提供这些依赖时，真实 DOM 渲染测试会明确标为跳过，其他测试照常运行。
 
 ## 来源去重的范围
 

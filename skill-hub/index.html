@@ -65,6 +65,10 @@
     display: flex; flex-direction: column; gap: 8px;
   }
   .card:hover { box-shadow: 0 6px 20px rgba(30,40,90,.08); transform: translateY(-2px); }
+  .skill-card { min-width: 0; display: flex; flex-direction: column; background: var(--card); border: 1px solid var(--line); border-radius: 14px; }
+  .skill-card > .card { flex: 1; border: 0; background: transparent; box-shadow: none; transform: none; }
+  .skill-card:hover { box-shadow: 0 6px 20px rgba(30,40,90,.08); }
+  .skill-card:has(.readme-section[open]) { grid-column: 1 / -1; }
   .card h3 { font-size: 16px; }
   .card .desc {
     font-size: 13px; color: var(--muted); line-height: 1.6; flex: 1;
@@ -129,6 +133,30 @@
   .doc pre code { background: none; color: inherit; }
   .doc table { border-collapse: collapse; }
   .doc td, .doc th { border: 1px solid var(--line); padding: 6px 12px; }
+  .readme-section { min-width: 0; background: #fff; border: 1px solid var(--line); border-radius: 14px; margin-bottom: 18px; }
+  .readme-section > summary { display: flex; align-items: center; justify-content: space-between; gap: 14px; list-style: none; cursor: pointer; padding: 17px 22px; font-size: 14px; font-weight: 600; }
+  .readme-section > summary::-webkit-details-marker { display: none; }
+  .readme-section > summary:focus-visible { outline: 3px solid #a5b4fc; outline-offset: 3px; border-radius: 10px; }
+  .readme-expand, .readme-collapse { color: var(--brand); font-size: 12px; white-space: nowrap; font-weight: 500; }
+  .readme-collapse, .readme-section[open] .readme-expand { display: none; }
+  .readme-section[open] .readme-collapse { display: inline; }
+  .skill-card > .readme-section { border: 0; border-top: 1px solid var(--line); border-radius: 0 0 14px 14px; margin: 0; }
+  .skill-card > .readme-section > summary { padding: 13px 21px; font-size: 13px; }
+  .readme-content { min-width: 0; padding: 0 22px 20px; }
+  .readme-status, .readme-note { font-size: 13px; color: var(--muted); line-height: 1.8; }
+  .readme-note { margin: 10px 0; padding: 10px 12px; background: var(--bg); border-radius: 8px; }
+  .readme-meta { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+  .readme-actions { display: flex; gap: 16px; align-items: center; margin-top: 12px; font-size: 13px; }
+  .readme-document { padding: 4px 0 0; margin: 0; border: 0; border-radius: 0; overflow-wrap: anywhere; }
+  .skill-card .readme-document { max-height: 540px; overflow: auto; overscroll-behavior: contain; }
+  .readme-document h1 { font-size: 23px; }
+  .readme-document h2 { font-size: 19px; }
+  .readme-document h3 { font-size: 16px; }
+  .readme-document img { max-width: 100%; height: auto; }
+  .readme-document blockquote { border-left: 3px solid var(--line); padding-left: 14px; color: var(--muted); margin: 12px 0; }
+  .readme-document a { text-decoration: underline; text-underline-offset: 3px; }
+  .readme-document:focus-visible { outline: 3px solid #a5b4fc; outline-offset: 3px; }
+  @media (max-width: 600px) { .readme-content { padding: 0 16px 16px; } .readme-section > summary { padding: 16px; } }
   .vlist { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 10px 26px; }
   .vitem { display: flex; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--line); align-items: baseline; flex-wrap: wrap; }
   .vitem:last-child { border-bottom: none; }
@@ -306,6 +334,7 @@
 
 <script src="shared.js"></script>
 <script src="importer.js"></script>
+<script src="readme.js"></script>
 <script src="preview.js"></script>
 <script src="app.js"></script>
 </body>

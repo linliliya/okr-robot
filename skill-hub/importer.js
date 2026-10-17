@@ -241,25 +241,31 @@
     ];
     return rules.find(([, regex]) => regex.test(text))?.[0] || "其他";
   }
-  async function readSkill(context, repo, ref, path) {
-    const filename = path === "." ? "SKILL.md" : `${path}/SKILL.md`;
+  async function readMarkdown(context, repo, ref, filename, label = "SKILL.md") {
     const data = await request(context, `/repos/${repo}/contents/${encodePath(filename)}?ref=${encodeURIComponent(ref)}`, 512 * 1024);
-    if (!data || data.type !== "file" || typeof data.content !== "string" || data.encoding !== "base64") {
-      throw problem("没有读到可用的 SKILL.md 文件，请检查链接，或手动填写。", "INVALID_SKILL_FILE");
+    if (!data || data.type !== "file" || typeof data.content !== "string" || data.encoding !== "base64" || data.target || data.submodule_git_url
+        || (data.path != null && data.path !== filename)) {
+      throw problem(`没有读到可用的 ${label} 文件，请检查来源链接。`, label === "SKILL.md" ? "INVALID_SKILL_FILE" : "INVALID_DOCUMENT");
     }
     const encoded = data.content.replace(/\s/g, "");
     if (Number(data.size) > LIMITS.file || encoded.length > Math.ceil(LIMITS.file / 3) * 4) {
-      throw problem("这个 SKILL.md 超过 256 KB，暂时无法自动读取，请手动填写。", "FILE_TOO_LARGE");
+      throw problem(`这个 ${label} 超过 256 KB，请到原项目查看。`, "FILE_TOO_LARGE");
     }
     let markdown;
     try {
       const binary = atob(encoded);
-      if (binary.length > LIMITS.file) throw problem("这个 SKILL.md 超过 256 KB，暂时无法自动读取，请手动填写。", "FILE_TOO_LARGE");
+      if (binary.length > LIMITS.file) throw problem(`这个 ${label} 超过 256 KB，请到原项目查看。`, "FILE_TOO_LARGE");
       markdown = new TextDecoder("utf-8", { fatal: true }).decode(Uint8Array.from(binary, char => char.charCodeAt(0)));
     } catch (error) {
       if (error.code === "FILE_TOO_LARGE") throw error;
-      throw problem("SKILL.md 的文字编码无法读取，请手动填写。", "INVALID_ENCODING");
+      throw problem(`${label} 的文字编码无法读取，请到原项目查看。`, "INVALID_ENCODING");
     }
+    return markdown;
+  }
+
+  async function readSkill(context, repo, ref, path) {
+    const filename = path === "." ? "SKILL.md" : `${path}/SKILL.md`;
+    const markdown = await readMarkdown(context, repo, ref, filename);
     const metadata = frontmatter(markdown);
     const source = sourceFor(repo, ref, path);
     const notices = [];
@@ -278,50 +284,135 @@
     }, ...(notices.length ? { notice: notices.join(" ") } : {}) };
   }
 
+  async function inspectInContext(context, input) {
+    const info = await repository(context, input.repo);
+    let ref = info.default_branch;
+    let scope = ".";
+    if (input.tail) {
+      const resolved = await resolveRef(context, input.repo, input.tail);
+      ref = resolved.ref;
+      scope = resolved.path;
+      try { return await readSkill(context, input.repo, ref, scope); }
+      catch (error) { if (error.code !== "NOT_FOUND" || input.mode === "blob") throw error; }
+    }
+    const files = await skillFiles(context, input.repo, ref, scope);
+    if (!files.length) throw problem("这个目录下没有找到 SKILL.md，请检查链接，或继续手动填写。", "NO_SKILLS");
+    if (input.mode === "directory") {
+      const namedPaths = files.filter(file => file.path.split("/").pop() === input.slug);
+      // A directory can have a different frontmatter name. Do not assign a
+      // skills.sh identity until the file itself confirms that name.
+      const namedMatches = [];
+      if (namedPaths.length > LIMITS.nameScan) throw problem("仓库里有较多同名目录，请改用具体 Skill 的 GitHub 目录链接。", "SKILL_NOT_LOCATED");
+      for (const file of namedPaths) {
+        const result = await readSkill(context, input.repo, ref, file.path);
+        if (result.skill.aliasKeys.includes(input.alias)) namedMatches.push({ file, result });
+      }
+      if (namedMatches.length === 1) return namedMatches[0].result;
+      if (namedMatches.length > 1) return choicesFor(input.repo, ref, namedMatches.map(match => match.file), "仓库里有多个 Skill 使用了这个名称，请选择具体目录。");
+      if (files.length > LIMITS.nameScan) throw problem("没有找到同名目录，这个仓库的 Skill 较多。请从原项目复制具体 Skill 的目录链接，或手动填写。", "SKILL_NOT_LOCATED");
+      const matches = [];
+      for (const file of files.filter(file => !namedPaths.includes(file))) {
+        const result = await readSkill(context, input.repo, ref, file.path);
+        if (result.skill.aliasKeys.includes(input.alias)) matches.push({ file, result });
+      }
+      if (matches.length === 1) return matches[0].result;
+      if (matches.length > 1) return choicesFor(input.repo, ref, matches.map(match => match.file), "仓库里有多个 Skill 使用了这个名称，请选择具体目录。");
+      throw problem("没有在仓库中找到这个名称的 Skill。请核对 skills.sh 链接，或改用具体 Skill 的 GitHub 目录链接。", "SKILL_NOT_LOCATED");
+    }
+    if (files.length === 1) return readSkill(context, input.repo, ref, files[0].path);
+    return choicesFor(input.repo, ref, files);
+  }
   async function inspect(rawUrl, options = {}) {
     const input = parseUrl(rawUrl);
-    return run(options, async context => {
-      const info = await repository(context, input.repo);
-      let ref = info.default_branch;
-      let scope = ".";
-      if (input.tail) {
-        const resolved = await resolveRef(context, input.repo, input.tail);
-        ref = resolved.ref;
-        scope = resolved.path;
-        try { return await readSkill(context, input.repo, ref, scope); }
-        catch (error) { if (error.code !== "NOT_FOUND" || input.mode === "blob") throw error; }
-      }
-      const files = await skillFiles(context, input.repo, ref, scope);
-      if (!files.length) throw problem("这个目录下没有找到 SKILL.md，请检查链接，或继续手动填写。", "NO_SKILLS");
-      if (input.mode === "directory") {
-        const namedPaths = files.filter(file => file.path.split("/").pop() === input.slug);
-        // A directory can have a different frontmatter name. Do not assign a
-        // skills.sh identity until the file itself confirms that name.
-        const namedMatches = [];
-        if (namedPaths.length > LIMITS.nameScan) throw problem("仓库里有较多同名目录，请改用具体 Skill 的 GitHub 目录链接。", "SKILL_NOT_LOCATED");
-        for (const file of namedPaths) {
-          const result = await readSkill(context, input.repo, ref, file.path);
-          if (result.skill.aliasKeys.includes(input.alias)) namedMatches.push({ file, result });
-        }
-        if (namedMatches.length === 1) return namedMatches[0].result;
-        if (namedMatches.length > 1) return choicesFor(input.repo, ref, namedMatches.map(match => match.file), "仓库里有多个 Skill 使用了这个名称，请选择具体目录。");
-        if (files.length > LIMITS.nameScan) throw problem("没有找到同名目录，这个仓库的 Skill 较多。请从原项目复制具体 Skill 的目录链接，或手动填写。", "SKILL_NOT_LOCATED");
-        const matches = [];
-        for (const file of files.filter(file => !namedPaths.includes(file))) {
-          const result = await readSkill(context, input.repo, ref, file.path);
-          if (result.skill.aliasKeys.includes(input.alias)) matches.push({ file, result });
-        }
-        if (matches.length === 1) return matches[0].result;
-        if (matches.length > 1) return choicesFor(input.repo, ref, matches.map(match => match.file), "仓库里有多个 Skill 使用了这个名称，请选择具体目录。");
-        throw problem("没有在仓库中找到这个名称的 Skill。请核对 skills.sh 链接，或改用具体 Skill 的 GitHub 目录链接。", "SKILL_NOT_LOCATED");
-      }
-      if (files.length === 1) return readSkill(context, input.repo, ref, files[0].path);
-      return choicesFor(input.repo, ref, files);
-    });
+    return run(options, context => inspectInContext(context, input));
   }
   async function readChoice(choice, options = {}) {
     if (!choice || typeof choice.url !== "string") throw problem("请重新选择一个 Skill", "INVALID_CHOICE");
     return inspect(choice.url, options);
   }
-  return { inspect, readChoice };
+
+  async function documentSource(context, input, explicitPath, rawUrl) {
+    if (input.mode === "directory" || (input.mode === "repository" && !explicitPath)) {
+      const resolved = await inspectInContext(context, input);
+      if (resolved.type !== "skill") {
+        throw problem("这个来源包含多个 Skill，请使用具体 Skill 的目录链接查看说明。", "SKILL_NOT_LOCATED");
+      }
+      const source = resolved.skill.source;
+      return documentSource(context, parseUrl(source.url), source.path, source.url);
+    }
+    if (explicitPath) {
+      let source;
+      try { source = H.normalizeSource(rawUrl, explicitPath); }
+      catch (_) { throw problem("保存的 Skill 目录与来源链接不一致，请核对来源。", "INVALID_SOURCE"); }
+      if (input.mode === "repository") {
+        const info = await repository(context, input.repo);
+        return { repo: input.repo, ref: info.default_branch, path: source.path };
+      }
+      const canonical = parseUrl(source.url);
+      const segments = source.path === "." ? 0 : source.path.split("/").length;
+      const ref = canonical.tail.slice(0, canonical.tail.length - segments).join("/");
+      const tree = await request(context, `/repos/${input.repo}/git/trees/${encodeURIComponent(ref)}`);
+      if (!tree || !Array.isArray(tree.tree)) throw problem("没有读到来源分支的目录，请重试。", "INVALID_RESPONSE");
+      return { repo: input.repo, ref, path: source.path };
+    }
+    const resolved = await resolveRef(context, input.repo, input.tail);
+    return { repo: input.repo, ref: resolved.ref, path: resolved.path };
+  }
+
+  function readmePriority(name) {
+    if (typeof name !== "string" || /[\/\\\u0000-\u001f\u007f-\u009f]/.test(name)) return null;
+    const filename = name.toLowerCase();
+    const extension = filename.match(/\.(md|markdown|mdown|txt)$/);
+    if (!extension && filename.includes(".")) return null;
+    const stem = extension ? filename.slice(0, -extension[0].length) : filename;
+    const match = stem.match(/^readme(?:[._-]([a-z]{2,8}(?:[._-][a-z]{2,8})?|中文))?$/);
+    if (!match) return null;
+    const language = (match[1] || "").replace(/[._]/g, "-");
+    const rank = ["zh-cn", "zh-hans", "cn"].includes(language) ? 0
+      : ["zh", "chinese", "中文"].includes(language) ? 1
+        : ["zh-tw", "zh-hant"].includes(language) ? 2 : !language ? 3 : 4;
+    return rank * 10 + (extension?.[1] === "md" ? 0 : extension ? 1 : 2);
+  }
+
+  async function directoryReadme(context, source, directory) {
+    const prefix = directory === "." ? "" : directory + "/";
+    const entries = await request(context, `/repos/${source.repo}/contents/${encodePath(directory === "." ? "" : directory)}?ref=${encodeURIComponent(source.ref)}`);
+    if (!Array.isArray(entries)) throw problem("来源链接没有指向可读取的目录，请核对 Skill 地址。", "INVALID_RESPONSE");
+    const candidates = entries.filter(entry => entry && entry.type === "file" && !entry.target && !entry.submodule_git_url
+      && readmePriority(entry.name) !== null && entry.path === prefix + entry.name)
+      .sort((a, b) => readmePriority(a.name) - readmePriority(b.name) || a.name.localeCompare(b.name, "en"));
+    for (const candidate of candidates) {
+      try {
+        const markdown = await readMarkdown(context, source.repo, source.ref, candidate.path, "README");
+        return { markdown, path: candidate.path, kind: "readme" };
+      } catch (error) { if (error.code !== "NOT_FOUND") throw error; }
+    }
+    return null;
+  }
+
+  async function readReadme(skill, options = {}) {
+    if (!skill || typeof skill !== "object") throw problem("没有找到这个 Skill 的来源链接。", "INVALID_SOURCE");
+    const rawUrl = skill.source_url || skill.source?.url || skill.url;
+    const explicitPath = skill.source_path ?? skill.source?.path ?? skill.path ?? "";
+    const input = parseUrl(rawUrl);
+    return run(options, async context => {
+      const source = await documentSource(context, input, explicitPath, rawUrl);
+      let document = await directoryReadme(context, source, source.path);
+      let scope = "skill";
+      if (!document && source.path !== ".") {
+        document = await directoryReadme(context, source, ".");
+        scope = "repository";
+      }
+      if (!document) {
+        const path = source.path === "." ? "SKILL.md" : `${source.path}/SKILL.md`;
+        document = { markdown: await readMarkdown(context, source.repo, source.ref, path), path, kind: "skill" };
+        scope = "skill";
+      }
+      return {
+        ...document, scope, repo: source.repo, ref: source.ref,
+        url: `https://github.com/${source.repo}/blob/${encodePath(source.ref)}/${encodePath(document.path)}`,
+      };
+    });
+  }
+  return { inspect, readChoice, readReadme };
 });
