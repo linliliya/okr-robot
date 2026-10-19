@@ -474,6 +474,7 @@ async function viewDetail(slug) {
     .eq("skill_id", skill.id).order("version", { ascending: false });
   if (versionError) throw versionError;
   const latest = versions?.[0];
+  const uploadInstallPrompt = "请帮我安装这个压缩包里的 Skill，安装好后告诉我怎么使用。";
   const docBody = (latest?.skill_md || "").replace(/^---\s*\n[\s\S]*?\n---\s*\n?/, "");
   const docHTML = docBody ? DOMPurify.sanitize(marked.parse(docBody)) : "";
   const tags = skill.tags ? skill.tags.split(/[,，\s]+/).filter(Boolean) : [];
@@ -496,51 +497,14 @@ async function viewDetail(slug) {
         ${latest ? `<button class="btn" id="dl-btn">⬇️ 下载最新版 v${latest.version}</button>` : ""}
         <a class="btn ghost" href="#/upload/${encodeURIComponent(skill.slug)}">上传新版本</a>
       </div>
-      <div class="install-guides">
-        <div class="ig-title">📦 下载后怎么用？按你用的工具选一个：</div>
-        <details open>
-          <summary>Claude Code（终端 / 桌面版）</summary>
-          <div class="g-body">
-            解压 zip，把<b>整个文件夹</b>放进 <code>~/.claude/skills/</code> 目录
-            （访达按 <code>Cmd+Shift+G</code> 输入这个路径即可打开；Windows 在
-            <code>C:\\Users\\你的用户名\\.claude\\skills\\</code>）。<br>
-            放好后新开一个对话，说出 skill 描述里的触发词就会自动生效，
-            也可以直接说「用 xx skill 帮我…」。
-          </div>
-        </details>
-        <details>
-          <summary>Claude 网页版 / App（claude.ai）</summary>
-          <div class="g-body">
-            不用解压。打开 claude.ai → 设置（Settings）→ 功能（Capabilities）→
-            <b>Skills</b> → 上传这个 zip 文件即可（需要先把设置里的
-            「Code execution / 代码执行」开关打开，skill 依赖它运行）。<br>
-            上传后可在列表里开关这个 skill，对话中提到相关需求会自动触发。
-            skill 只对自己的账号生效，同事需要各自上传。
-          </div>
-        </details>
-        <details>
-          <summary>Codex（OpenAI 编程助手）</summary>
-          <div class="g-body">
-            Codex 原生支持 skill，格式和 Claude 通用，同一个 zip 直接用：<br>
-            解压后把<b>整个文件夹</b>放进 <code>~/.agents/skills/</code> 目录
-            （没有就新建一个）。对话里输入 <code>$技能名</code> 显式调用，
-            输入 <code>/skills</code> 可查看已安装的 skill，匹配需求时也会自动触发。<br>
-            提示：旧版 Codex 用的是 <code>~/.codex/skills/</code>，如果不生效，
-            先升级 Codex 到最新版，或把文件夹放到这个旧路径试试。
-          </div>
-        </details>
-        <details>
-          <summary>ChatGPT / 豆包 / 其他 AI 聊天助手</summary>
-          <div class="g-body">
-            新版 ChatGPT 桌面版已支持 skill（对话里输入 <code>@</code> 查看）。
-            其他聊天助手用通用方法：解压后打开里面的 <code>SKILL.md</code>
-            （右键 → 打开方式 → 文本编辑），把全文复制，作为对话的<b>第一条消息</b>发给
-            AI，然后再说你的需求。<br>
-            注意：如果这个 skill 带了脚本文件（比如 scripts 文件夹），纯聊天助手无法运行脚本，
-            只能用到里面的方法和模板部分。
-          </div>
-        </details>
-      </div>
+      <section class="install-guides" aria-label="安装与使用">
+        <h2>安装与使用</h2>
+        <div class="install-step"><span class="step-number">1</span><div><h3>下载压缩包</h3><p>点击上方「下载最新版」，把 ZIP 文件保存到电脑。</p></div></div>
+        <div class="install-step"><span class="step-number">2</span><div><h3>发给本地 AI Agent</h3><p>把 ZIP 压缩包拖进对话，和下面这句话一起发送。</p></div></div>
+        <div class="install-prompt">${esc(uploadInstallPrompt)}</div>
+        <button class="btn small ghost" id="copy-upload-install" type="button">复制安装话术</button>
+        <p class="install-note">安装完成后，直接告诉它你要做什么。</p>
+      </section>
     </div>
     ${docHTML ? `<div class="doc">${docHTML}</div>` : ""}
     <div class="vlist">
@@ -568,6 +532,7 @@ async function viewDetail(slug) {
     URL.revokeObjectURL(url);
     await sb.rpc("increment_downloads", { p_skill_id: skill.id });
   }
+  document.getElementById("copy-upload-install").onclick = () => copyText(uploadInstallPrompt, "已复制，把这句话和压缩包一起发给 AI");
   const dlBtn = document.getElementById("dl-btn");
   if (dlBtn) dlBtn.onclick = () => download(latest.file_path, latest.version);
   $app.querySelectorAll("[data-ver]").forEach(b =>
