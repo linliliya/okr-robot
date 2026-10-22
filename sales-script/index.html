@@ -250,9 +250,11 @@
 
   .chat { display: flex; flex-direction: column; gap: 8px; }
   .bubble-row { display: flex; }
+  /* 宽度限制放在消息容器上，避免气泡按已经收缩的父元素再缩一次。 */
+  .bubble-row > div { max-width: 88%; min-width: 0; }
   .bubble-row.sales { justify-content: flex-end; }
   .bubble-row.note { justify-content: center; }
-  .bubble { max-width: 78%; padding: 8px 12px; border-radius: 12px; white-space: pre-wrap; word-break: break-word; font-size: 14px; }
+  .bubble { padding: 8px 12px; border-radius: 12px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; }
   .bubble-row.customer .bubble { background: #fff; border: 1px solid var(--line); border-top-left-radius: 4px; }
   .bubble-row.sales .bubble { background: #dff3e6; border-top-right-radius: 4px; }
   .bubble-row.note .bubble { background: none; color: var(--faint); font-size: 12.5px; padding: 2px 8px; }
@@ -345,7 +347,7 @@
     .script-grid { grid-template-columns: minmax(0, 1fr); }
     .todo { grid-template-columns: 22px minmax(0, 1fr) 28px; }
     .todo input.owner { grid-column: 2; }
-    .bubble { max-width: 90%; }
+    .bubble-row > div { max-width: 94%; }
   }
 </style>
 </head>
